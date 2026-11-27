@@ -39,9 +39,9 @@ export function parseBethagAmount(value, fallback = Number.NaN) {
     // Mixed-locale values must have exactly one decimal separator and valid
     // three-digit thousands groups. Do not silently normalize malformed
     // groupings such as 12,34.56 or 1.23,45 into plausible but wrong amounts.
-    if (!integerSource || !/^\\d+$/.test(fractionPart)) return fallback;
+    if (!integerSource || !/^\d+$/.test(fractionPart)) return fallback;
     const groups = integerSource.split(thousandsSeparator);
-    if (groups.some((group) => !/^\\d+$/.test(group))) return fallback;
+    if (groups.some((group) => !/^\d+$/.test(group))) return fallback;
     if (
       groups.length > 1 &&
       (groups[0].length < 1 ||
