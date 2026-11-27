@@ -85,7 +85,7 @@ await assert.rejects(
     condominiumId: "condominium-1",
     deleteScopedRecord: async () => ({ data: null, error: null }),
   }),
-  /nessuna modifica|non trovato|già eliminato/i,
+  /non trovato|già eliminato/i,
 );
 
 const databaseError = new Error("RLS denied");
@@ -125,18 +125,18 @@ await assert.rejects(
 const registerPage = await readFile(new URL("../src/RegisterPage.tsx", import.meta.url), "utf8");
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
 const removeStart = registerPage.indexOf("async function remove(");
-const removeEnd = registerPage.indexOf("\\n return <section", removeStart);
+const removeEnd = registerPage.indexOf("\n return <section", removeStart);
 assert.ok(removeStart >= 0 && removeEnd > removeStart, "RegisterPage remove handler must exist.");
 const removeSection = registerPage.slice(removeStart, removeEnd);
-assert.match(registerPage, /import \\{ deleteCondominiumWork \\} from "\\.\\/lib\\/bethagBackend"/);
-assert.match(registerPage, /import \\{ deleteRegisterRecordSafely \\} from "\\.\\/lib\\/registerRecordDeletion\\.mjs"/);
+assert.match(registerPage, /import \{ deleteCondominiumWork \} from "\.\/lib\/bethagBackend"/);
+assert.match(registerPage, /import \{ deleteRegisterRecordSafely \} from "\.\/lib\/registerRecordDeletion\.mjs"/);
 assert.match(removeSection, /deleteRegisterRecordSafely/);
-assert.match(removeSection, /deleteWork:\\s*deleteCondominiumWork/);
-assert.match(removeSection, /\\.eq\\("condominium_id",\\s*condominiumId\\)/);
-assert.match(removeSection, /\\.select\\("id"\\)\\.maybeSingle\\(\\)/);
+assert.match(removeSection, /deleteWork:\s*deleteCondominiumWork/);
+assert.match(removeSection, /\.eq\("condominium_id",\s*condominiumId\)/);
+assert.match(removeSection, /\.select\("id"\)\.maybeSingle\(\)/);
 assert.doesNotMatch(
   removeSection,
-  /from\\(table\\)\\.delete\\(\\)\\.eq\\("id",id\\)\\.eq\\("workspace_id",workspaceId\\);/,
+  /from\(table\)\.delete\(\)\.eq\("id",id\)\.eq\("workspace_id",workspaceId\);/,
   "The previous unscoped generic delete must not remain.",
 );
 assert.ok(
