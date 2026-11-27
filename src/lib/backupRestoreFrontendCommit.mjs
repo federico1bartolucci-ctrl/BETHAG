@@ -1,40 +1,4 @@
 /**
- * Returns export-time read failures only for tables that the restore handler
- * is allowed to restore. Authorization/workflow tables are intentionally
- * excluded by the caller because they are not restored from a user-supplied
- * backup.
- *
- * Missing metadata is accepted for legacy backups. A present but malformed
- * error section or malformed value for a restorable table fails closed.
- */
-export function getRestorableBackupSourceReadErrors(backendReadErrors, restorableTables) {
-  if (!Array.isArray(restorableTables)) {
-    throw new TypeError("restorableTables must be an array");
-  }
-  if (backendReadErrors === undefined || backendReadErrors === null) return [];
-  if (
-    typeof backendReadErrors !== "object" ||
-    Array.isArray(backendReadErrors)
-  ) {
-    return ["backendReadErrors: formato non valido"];
-  }
-
-  const allowedTables = new Set(
-    restorableTables.filter((table) => typeof table === "string" && table.trim())
-  );
-  const failures = [];
-  for (const [table, message] of Object.entries(backendReadErrors)) {
-    if (!allowedTables.has(table)) continue;
-    if (typeof message !== "string" || message.trim().length === 0) {
-      failures.push(`${table}: formato errore non valido`);
-      continue;
-    }
-    failures.push(`${table}: ${message.trim()}`);
-  }
-  return failures;
-}
-
-/**
  * Commits the backup's frontend/localStorage snapshot only after every
  * backend restore operation completed and every restorable source table was
  * exported without read errors.
@@ -71,7 +35,25 @@ export function commitBackupFrontendStateAfterBackendRestore(
     };
   }
 
-  commitFrontendState();
+  const frontendResult = commitFrontendState();
+  const failedLocalStorageWrites = Number.isFinite(frontendResult?.failedLocalStorageWrites)
+    ? Math.max(0, Math.trunc(frontendResult.failedLocalStorageWrites))
+    : 0;
+  const rollbackFailed = Number.isFinite(frontendResult?.rollbackFailed)
+    ? Math.max(0, Math.trunc(frontendResult.rollbackFailed))
+    : 0;
+
+  if (failedLocalStorageWrites > 0 || rollbackFailed > 0) {
+    return {
+      committed: false,
+      failedOperations: 0,
+      failedSourceReads: 0,
+      failedLocalStorageWrites,
+      rollbackFailed,
+      reason: "frontend_local_storage_incomplete",
+    };
+  }
+
   return {
     committed: true,
     failedOperations: 0,
