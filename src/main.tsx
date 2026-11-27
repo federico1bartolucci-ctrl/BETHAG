@@ -3567,8 +3567,9 @@ function App() {
         Object.entries(state).forEach(([key, value]) => {
           const keysRecord = KEYS as Record<string, string>;
           const storageKey = Object.hasOwn(keysRecord, key) ? keysRecord[key] : undefined;
-          if (typeof storageKey === "string" && storageKey && value !== undefined && key !== "profile")
+          if (typeof storageKey === "string" && storageKey && value !== undefined && key !== "profile") {
             localStorageRestoreData[storageKey] = value;
+          }
           }
         });
         if (state.profile) localStorageRestoreData[KEYS.profile] = state.profile;
