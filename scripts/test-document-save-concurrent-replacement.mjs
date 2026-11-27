@@ -50,7 +50,7 @@ function createClient(initial = initialRow, options = {}) {
     if (!row) return false;
     return filters.every(({ kind, key, value }) => {
       if (kind === "is") return (row[key] ?? null) === value;
-      const actual = row[key];
+      const actual = key === "data->>storagePath" ? row.data?.storagePath ?? null : row[key];
       if (value && typeof value === "object") return JSON.stringify(actual) === JSON.stringify(value);
       return actual === value;
     });
@@ -67,6 +67,7 @@ function createClient(initial = initialRow, options = {}) {
         update(payload) { this.operation = "update"; this.payload = payload; return this; },
         eq(key, value) { this.filters.push({ kind: "eq", key, value }); return this; },
         is(key, value) { this.filters.push({ kind: "is", key, value }); return this; },
+        filter(key, operator, value) { assert.equal(operator, "eq"); this.filters.push({ kind: "eq", key, value }); return this; },
         async maybeSingle() {
           if (this.operation === "select") {
             const snapshot = matches(state.row, this.filters) ? clone(state.row) : null;
@@ -213,7 +214,7 @@ const [backend, main, flow, packageJson] = await Promise.all([
   readFile(new URL("../package.json", import.meta.url), "utf8").then(JSON.parse),
 ]);
 assert.match(backend, /updateDocumentRecordIfStorageVersionMatches\(/);
-assert.match(backend, /\.eq\("data", current\.data\)/);
+assert.match(await readFile(new URL("../src/lib/documentRecordCompareAndSwap.mjs", import.meta.url), "utf8"), /\.filter\("data->>storagePath", "eq", legacyStoragePath\)/);
 assert.match(backend, /\.insert\(row\)/);
 assert.match(main, /persistDocument: \(item, previousDocument\) => saveWorkspaceDocumentRecord\(profile\.workspaceId, item, previousDocument\)/);
 assert.match(flow, /persistDocument\(nextDocument, previousDocument\)/);
