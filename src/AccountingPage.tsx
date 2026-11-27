@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
+import { ledgerEditMatchesCondominium, requireUpdatedLedgerEntry } from "./lib/ledgerUpdateResult.mjs";
 import { isValidISOCalendarDate } from "./lib/isoCalendarDate.mjs";
 import { prepareConsumptionCsvImport } from "./lib/consumptionCsv.mjs";
 import MemberTransferPanel from "./MemberTransferPanel";
@@ -815,6 +816,18 @@ function AccountingPage({
       setError("La data del movimento non rientra nell'esercizio contabile selezionato.");
       return;
     }
+    if (editingLedger && !ledgerEditMatchesCondominium(editingLedger, dbCondominiumId)) {
+      setError("Il movimento contabile selezionato non appartiene più al condominio corrente. Ricarica la contabilità prima di modificarlo.");
+      return;
+    }
+    if (editingLedger) {
+      const existingAllocations = allocations.filter(a => a.ledger_entry_id === editingLedger.id && a.condominium_id === dbCondominiumId);
+      const allocatedAmount = existingAllocations.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+      if (existingAllocations.length > 0 && (ledgerForm.direction !== "Uscita" || Number(ledgerForm.amount) + 0.005 < allocatedAmount)) {
+        setError("La spesa non può essere ridotta sotto il totale delle ripartizioni già registrate né trasformata in entrata finché esistono ripartizioni. Riduci o elimina prima le quote.");
+        return;
+      }
+    }
     if (editingLedger) {
       const { count: linkedInstallments, error: linkedInstallmentsError } = await supabase
         .from("condominium_installments")
@@ -850,15 +863,22 @@ function AccountingPage({
         expense_type: ledgerForm.direction === "Uscita" ? ledgerForm.expense_type : "Ordinaria",
         notes: ledgerForm.notes,
       };
-      const query = editingLedger
-        ? supabase
-            .from("condominium_ledger_entries")
-            .update(payload)
-            .eq("id", editingLedger.id)
-            .eq("workspace_id", workspaceId)
-        : supabase.from("condominium_ledger_entries").insert(payload);
-      const { error: saveError } = await query;
-      if (saveError) throw saveError;
+      if (editingLedger) {
+        const result = await supabase
+          .from("condominium_ledger_entries")
+          .update(payload)
+          .eq("id", editingLedger.id)
+          .eq("workspace_id", workspaceId)
+          .eq("condominium_id", dbCondominiumId)
+          .select("id")
+          .maybeSingle();
+        requireUpdatedLedgerEntry(result);
+      } else {
+        const { error: saveError } = await supabase
+          .from("condominium_ledger_entries")
+          .insert(payload);
+        if (saveError) throw saveError;
+      }
       setEditingLedger(null);
       setShowLedgerForm(false);
       setLedgerForm({ ...emptyLedger });
