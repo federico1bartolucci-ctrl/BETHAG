@@ -17,7 +17,7 @@ assert.equal(
 );
 const caseFactoryStart = accounting.indexOf("function createEmptyCaseForm(date = new Date())");
 const caseFactoryBodyStart = accounting.indexOf("{", caseFactoryStart);
-const caseFactoryBodyEnd = accounting.indexOf("\\n}", caseFactoryBodyStart);
+const caseFactoryBodyEnd = accounting.indexOf("\n}", caseFactoryBodyStart);
 assert.ok(caseFactoryStart >= 0 && caseFactoryBodyStart > caseFactoryStart && caseFactoryBodyEnd > caseFactoryBodyStart, "new legal cases must use a fresh form factory");
 const caseFactoryBody = accounting.slice(caseFactoryBodyStart + 1, caseFactoryBodyEnd);
 assert.ok(caseFactoryBody.includes("opened_date: localISODate(date)"), "new legal cases must default to the local calendar date");
