@@ -5,6 +5,7 @@ import { isValidISOCalendarDate } from "./lib/isoCalendarDate.mjs";
 import { prepareConsumptionCsvImport } from "./lib/consumptionCsv.mjs";
 import { requireAccountingUpdatedRow } from "./lib/accountingUpdateResult.mjs";
 import MemberTransferPanel from "./MemberTransferPanel";
+import { localISODate } from "./lib/local-date";
 import { loadAccountingCondominiumMembers } from "./lib/accountingCondominiumMembers.mjs";
 import { loadAccountingUnitMembers } from "./lib/accountingMemberLookup.mjs";
 import { calculateLedgerExpensePaid } from "./lib/accountingExpensePaidSummary.js";
@@ -116,7 +117,7 @@ type AccountingSettings = { id:string; condominium_id:string; accounting_start_d
 
 const emptyLedger: Omit<LedgerEntry, "id" | "condominium_id"> = {
   fiscal_year_id: null,
-  entry_date: new Date().toISOString().slice(0, 10),
+  entry_date: localISODate(),
   direction: "Uscita",
   expense_type: "Ordinaria",
   category: "Manutenzione",
