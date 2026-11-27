@@ -134,11 +134,11 @@ assert.equal(rollbackFailureCommit.rollbackFailed, 1);
 
 const mainSource = await readFile(new URL("../src/main.tsx", import.meta.url), "utf8");
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
-assert.match(mainSource, /restoreBackupLocalStorageData\\s*\\(/);
-assert.match(mainSource, /Object\\.values\\(KEYS\\)\\.filter\\s*\\(/);
-assert.match(mainSource, /new Set\\(\\[KEYS\\.session, KEYS\\.sessionEmail\\]\\)/);
-assert.match(mainSource, /backup\\.localStorageData/);
-assert.match(mainSource, /rollbackOnFailure:\\s*true/);
+assert.match(mainSource, /restoreBackupLocalStorageData\s*\(/);
+assert.match(mainSource, /Object\.values\(KEYS\)\.filter\s*\(/);
+assert.match(mainSource, /new Set\(\[KEYS\.session, KEYS\.sessionEmail\]\)/);
+assert.match(mainSource, /backup\.localStorageData/);
+assert.match(mainSource, /rollbackOnFailure:\s*true/);
 assert.match(mainSource, /failedLocalStorageWrites/);
 assert.match(mainSource, /frontend_local_storage_incomplete/);
 const restoreStart = mainSource.indexOf("const restoreWorkspaceBackup = async (file: File) => {");
