@@ -4,6 +4,7 @@ import { ledgerEditMatchesCondominium, requireUpdatedLedgerEntry } from "./lib/l
 import { isValidISOCalendarDate } from "./lib/isoCalendarDate.mjs";
 import { prepareConsumptionCsvImport } from "./lib/consumptionCsv.mjs";
 import { requireAccountingUpdatedRow } from "./lib/accountingUpdateResult.mjs";
+import { hasGeneratedInstallmentAllocationMutation } from "./lib/allocationInstallmentGuard.mjs";
 import MemberTransferPanel from "./MemberTransferPanel";
 import { localISODate } from "./lib/local-date";
 import { loadAccountingCondominiumMembers } from "./lib/accountingCondominiumMembers.mjs";
@@ -1260,8 +1261,16 @@ function AccountingPage({
         .eq("condominium_id", dbCondominiumId)
         .eq("ledger_entry_id", editingAllocation.ledger_entry_id);
       if (linkedInstallmentsError) { setError(linkedInstallmentsError.message); return; }
-      if ((linkedInstallments || 0) > 0 && (Number(amount) !== Number(editingAllocation.amount) || allocationForm.unit_id !== editingAllocation.unit_id)) {
-        setError("Questa ripartizione è collegata a rate generate. Per mantenere la quadratura, unità e importo non possono essere modificati finché esistono rate collegate.");
+      if (hasGeneratedInstallmentAllocationMutation({
+        linkedInstallmentCount: linkedInstallments,
+        originalAmount: editingAllocation.amount,
+        nextAmount: amount,
+        originalUnitId: editingAllocation.unit_id,
+        nextUnitId: allocationForm.unit_id,
+        originalLedgerEntryId: editingAllocation.ledger_entry_id,
+        nextLedgerEntryId: allocationForm.ledger_entry_id,
+      })) {
+        setError("Non è possibile modificare unità, importo o spesa contabile di una ripartizione con rate generate o con conteggio delle rate non verificabile.");
         return;
       }
     }
