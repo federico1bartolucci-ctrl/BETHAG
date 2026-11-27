@@ -37,3 +37,7 @@ I percorsi prodotti dai flussi correnti `storeCondominiumDocumentFiles` e `store
 ## Sicurezza
 
 Nessun accesso o modifica a QA/Production. Nessun merge, deploy, reset o dispatch manuale.
+
+## Regressione aggiuntiva
+
+Il test include anche un segmento contenente backslash, oltre ai percorsi cross-workspace, ai prefissi simili e ai segmenti di traversal.
