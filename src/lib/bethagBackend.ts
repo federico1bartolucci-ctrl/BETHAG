@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { parseInvoiceDate } from "./invoiceDate.mjs";
 import { resolveActiveWorkspaceId } from "./preferredWorkspaceResolution.mjs";
 import { loadExistingCondominiumUnits, requireCondominiumUnitRenameResult } from "./condominiumUnitGeneration.mjs";
 import { loadCondominiumWorkReconciliationRows } from "./workReconciliationPagination.mjs";
@@ -1526,16 +1527,7 @@ function parseBethagAmount(value: unknown): number {
 }
 
 function parseBethagDate(value: unknown): string {
-  const raw = String(value ?? "").trim();
-  if (!raw) return new Date().toISOString().slice(0, 10);
-  const match = raw.match(/^(\\d{1,2})[\\/-](\\d{1,2})[\\/-](\\d{4})$/);
-  if (match) {
-    const day = match[1].padStart(2, "0");
-    const month = match[2].padStart(2, "0");
-    return `${match[3]}-${month}-${day}`;
-  }
-  const iso = raw.match(/^(\\d{4}-\\d{2}-\\d{2})/);
-  return iso ? iso[1] : new Date(raw).toISOString().slice(0, 10);
+  return parseInvoiceDate(value);
 }
 
 function extractBethagDocumentData(data: unknown): Record<string, any> {
