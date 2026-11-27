@@ -17,3 +17,17 @@ The SQL remains under `supabase/rebuild/proposed-forward-migrations`. It is not 
 
 ## Safety
 No QA/Production access or writes, no database deployment, no reset, and no paid services.
+
+
+## Member deletion interleaving
+
+A second race remained after serializing concurrent owner saves: \`deleteCondominiumMember()\` still performed a client-side read/modify/write of \`ownerMemberIds\` after deleting the member. A concurrent owner save could commit first, then the stale delete snapshot could overwrite the newly added co-owner. The same path also deleted \`portal_access\` before the database's financial-history DELETE guard ran, so a blocked member deletion could revoke access prematurely.
+
+The corrected client path performs one scoped \`condominium_members\` DELETE and verifies the returned row. The existing BEFORE DELETE financial-history guard and AFTER DELETE Portal/owner-reference triggers execute in the same database transaction. Client-side Portal deletion and unit JSONB cleanup are removed.
+
+The PostgreSQL 17 rehearsal now:
+- reproduces the old delete-vs-owner-save lost-update race;
+- runs an authenticated member DELETE trigger concurrently with the row-locked owner-sync RPC;
+- verifies that the deleted member is absent and the surviving co-owner remains in \`ownerMemberIds\`.
+
+The test remains restricted to the disposable local \`bethag_clean_install_test\` database.
