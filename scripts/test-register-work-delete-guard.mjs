@@ -157,11 +157,19 @@ function ledgerClient(rowsByField, errorsByField = {}) {
 
 const snakeCaseLedger = { id: "ledger-snake", data: { work_id: "work-snake" } };
 const snakeOnlyClient = ledgerClient({ workId: [], work_id: [snakeCaseLedger] });
-assert.equal(
-  snakeOnlyClient.calls.length,
-  0,
-  "The old camelCase-only lookup would not inspect the snake_case reference.",
+const legacyCamelOnlyResult = await snakeOnlyClient.client
+  .from("condominium_ledger_entries")
+  .select("id")
+  .eq("workspace_id", "workspace-1")
+  .eq("direction", "Uscita")
+  .contains("data", { workId: "work-snake" })
+  .limit(1);
+assert.deepEqual(
+  legacyCamelOnlyResult.data,
+  [],
+  "The previous camelCase-only lookup misses a ledger row stored with work_id.",
 );
+snakeOnlyClient.calls.length = 0;
 const snakeRows = await loadLinkedWorkLedgerRows(snakeOnlyClient.client, "workspace-1", "work-snake");
 assert.deepEqual(snakeRows, [snakeCaseLedger]);
 assert.ok(snakeOnlyClient.calls.some(call => call[0] === "contains" && call[1] === "workId"));
