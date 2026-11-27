@@ -3,6 +3,7 @@ import { supabase } from "./lib/supabase";
 import { ledgerEditMatchesCondominium, requireUpdatedLedgerEntry } from "./lib/ledgerUpdateResult.mjs";
 import { isValidISOCalendarDate } from "./lib/isoCalendarDate.mjs";
 import { prepareConsumptionCsvImport } from "./lib/consumptionCsv.mjs";
+import { requireAccountingUpdatedRow } from "./lib/accountingUpdateResult.mjs";
 import MemberTransferPanel from "./MemberTransferPanel";
 import { loadAccountingCondominiumMembers } from "./lib/accountingCondominiumMembers.mjs";
 import { loadAccountingUnitMembers } from "./lib/accountingMemberLookup.mjs";
@@ -919,15 +920,12 @@ function AccountingPage({
         active: fundForm.active,
         notes: fundForm.notes,
       };
-      const query = editingFund
-        ? supabase
-            .from("condominium_funds")
-            .update(payload)
-            .eq("id", editingFund.id)
-            .eq("workspace_id", workspaceId)
-        : supabase.from("condominium_funds").insert(payload);
-      const { error: saveError } = await query;
-      if (saveError) throw saveError;
+      if (editingFund) {
+        await requireAccountingUpdatedRow(supabase.from("condominium_funds").update(payload).eq("id", editingFund.id).eq("workspace_id", workspaceId).eq("condominium_id", dbCondominiumId), "Il fondo");
+      } else {
+        const { error: saveError } = await supabase.from("condominium_funds").insert(payload);
+        if (saveError) throw saveError;
+      }
       setEditingFund(null);
       setShowFundForm(false);
       flash("Fondo salvato.");
@@ -960,15 +958,12 @@ function AccountingPage({
         status: taxForm.status,
         notes: taxForm.notes,
       };
-      const query = editingTax
-        ? supabase
-            .from("condominium_tax_obligations")
-            .update(payload)
-            .eq("id", editingTax.id)
-            .eq("workspace_id", workspaceId)
-        : supabase.from("condominium_tax_obligations").insert(payload);
-      const { error: saveError } = await query;
-      if (saveError) throw saveError;
+      if (editingTax) {
+        await requireAccountingUpdatedRow(supabase.from("condominium_tax_obligations").update(payload).eq("id", editingTax.id).eq("workspace_id", workspaceId).eq("condominium_id", dbCondominiumId), "L'adempimento fiscale");
+      } else {
+        const { error: saveError } = await supabase.from("condominium_tax_obligations").insert(payload);
+        if (saveError) throw saveError;
+      }
       setEditingTax(null);
       setShowTaxForm(false);
       flash("Adempimento fiscale salvato.");
@@ -1000,15 +995,12 @@ function AccountingPage({
         closed_date: caseForm.closed_date || null,
         notes: caseForm.notes,
       };
-      const query = editingCase
-        ? supabase
-            .from("condominium_legal_cases")
-            .update(payload)
-            .eq("id", editingCase.id)
-            .eq("workspace_id", workspaceId)
-        : supabase.from("condominium_legal_cases").insert(payload);
-      const { error: saveError } = await query;
-      if (saveError) throw saveError;
+      if (editingCase) {
+        await requireAccountingUpdatedRow(supabase.from("condominium_legal_cases").update(payload).eq("id", editingCase.id).eq("workspace_id", workspaceId).eq("condominium_id", dbCondominiumId), "La pratica legale");
+      } else {
+        const { error: saveError } = await supabase.from("condominium_legal_cases").insert(payload);
+        if (saveError) throw saveError;
+      }
       setEditingCase(null);
       setShowCaseForm(false);
       flash("Pratica legale salvata.");
@@ -1302,11 +1294,12 @@ function AccountingPage({
           : "Da pagare",
         notes: allocationForm.notes,
       };
-      const query = editingAllocation
-        ? supabase.from("condominium_expense_allocations").update(payload).eq("id", editingAllocation.id).eq("workspace_id", workspaceId)
-        : supabase.from("condominium_expense_allocations").insert(payload);
-      const { error: saveError } = await query;
-      if (saveError) throw saveError;
+      if (editingAllocation) {
+        await requireAccountingUpdatedRow(supabase.from("condominium_expense_allocations").update(payload).eq("id", editingAllocation.id).eq("workspace_id", workspaceId).eq("condominium_id", dbCondominiumId), "La ripartizione");
+      } else {
+        const { error: saveError } = await supabase.from("condominium_expense_allocations").insert(payload);
+        if (saveError) throw saveError;
+      }
       setEditingAllocation(null);
       setShowAllocationForm(false);
       setAllocationForm({ ledger_entry_id: "", unit_id: "", allocation_basis: "Millesimi generali", millesimi: 0, amount: 0, paid_amount: 0, due_date: "", status: "Da pagare", notes: "" });
@@ -1425,8 +1418,7 @@ function AccountingPage({
         updated_at:new Date().toISOString()
       };
       if (editingAllocationIntakeId) {
-        const { error: updateError } = await supabase.from("condominium_allocation_intakes").update(payload).eq("id",editingAllocationIntakeId).eq("workspace_id",workspaceId);
-        if (updateError) throw updateError;
+        await requireAccountingUpdatedRow(supabase.from("condominium_allocation_intakes").update(payload).eq("id", editingAllocationIntakeId).eq("workspace_id", workspaceId).eq("condominium_id", dbCondominiumId), "L'acquisizione del riparto");
       } else {
         const { error: saveError } = await supabase.from("condominium_allocation_intakes").insert(payload);
         if (saveError) throw saveError;
