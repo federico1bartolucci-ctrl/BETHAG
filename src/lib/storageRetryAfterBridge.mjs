@@ -70,16 +70,18 @@ function recordRetryAfter(path, value) {
   if (retryAt === null) return;
 
   const current = pendingRetryAfterByPath.get(path);
-  const strongestRetryAt = Math.max(current?.retryAt ?? 0, retryAt);
+  const currentRetryAt = current?.expiresAt > now ? current.retryAt : 0;
+  const strongestRetryAt = Math.max(currentRetryAt, retryAt);
 
-  // Keep the longest outstanding server instruction for this object path.
-  // Concurrent SDK error handlers may resolve in a different order than the
-  // corresponding fetch responses, so a consumable FIFO can assign a shorter
-  // Retry-After to the request that actually received the longer one.
+  // Retain the strongest outstanding deadline. Concurrent SDK error handlers
+  // can resolve out of fetch-response order, so a consumable FIFO can assign a
+  // shorter Retry-After to the request that actually received the longer one.
+  // Keep the entry until after the server deadline; otherwise a long
+  // Retry-After could expire from memory while it is still in force.
   pendingRetryAfterByPath.delete(path);
   pendingRetryAfterByPath.set(path, {
     retryAt: strongestRetryAt,
-    expiresAt: now + RETRY_AFTER_TTL_MS,
+    expiresAt: Math.max(now + RETRY_AFTER_TTL_MS, strongestRetryAt + RETRY_AFTER_TTL_MS),
   });
 
   while (pendingRetryAfterByPath.size > MAX_PENDING_PATHS) {
@@ -118,7 +120,7 @@ export function createStorageRetryAfterFetch(fetchImpl) {
 /**
  * Reads the strongest outstanding Retry-After instruction for a Storage path.
  * The deadline is retained until it expires so concurrent errors for the same
- * path cannot consume each other's metadata in response-completion order.
+ * path cannot consume one another's metadata.
  */
 export function readStorageRetryAfter(error, path) {
   const now = Date.now();
@@ -146,5 +148,10 @@ export function readStorageRetryAfter(error, path) {
   ].filter((value) => value !== null);
 
   if (!deadlines.length) return null;
-  return String(Math.max(0, (Math.max(...deadlines) - now) / 1000));
+  const strongestRetryAt = Math.max(...deadlines);
+  if (strongestRetryAt <= now) {
+    pendingRetryAfterByPath.delete(path);
+    return "0";
+  }
+  return String((strongestRetryAt - now) / 1000);
 }
