@@ -15,10 +15,14 @@ assert.ok(restoreStart >= 0 && restoreEnd > restoreStart, "workspace restore han
 const restoreHandler = source.slice(restoreStart, restoreEnd);
 const guardCall = restoreHandler.indexOf("getCommunicationRecipientLedgerRestoreBlockReason(backup)");
 const firstConfirmation = restoreHandler.indexOf("window.confirm");
+const restoreOrderDeclaration = restoreHandler.indexOf("const restoreOrder = WORKSPACE_BACKUP_RESTORE_ORDER;");
+const backendRestoreLoop = restoreHandler.indexOf("if (supabase) {", restoreOrderDeclaration);
 const firstFrontendMutation = restoreHandler.indexOf('apply("condominiums"');
 const firstLocalStorageWrite = restoreHandler.indexOf("localStorage.setItem");
 assert.ok(guardCall >= 0, "restore must call the legacy recipient-ledger guard");
 assert.ok(firstConfirmation > guardCall, "legacy backup guard must run before user confirmation");
+assert.ok(restoreOrderDeclaration > firstConfirmation && backendRestoreLoop > restoreOrderDeclaration,
+  "communication-ledger metadata guard must run before any backend restore write");
 assert.ok(firstFrontendMutation > guardCall, "legacy backup guard must run before React state mutation");
 assert.ok(firstLocalStorageWrite > guardCall, "legacy backup guard must run before localStorage mutation");
 const recipientPreflightCall = restoreHandler.indexOf("prepareCommunicationRecipientsForBackupRestore(");
@@ -101,6 +105,26 @@ const completeBackup = {
   backendReadErrors: {},
 };
 assert.equal(getCommunicationRecipientLedgerRestoreBlockReason(completeBackup), "");
+
+// A present communication-table read-error key is unsafe regardless of its
+// JSON value shape. The old String(value).trim() check treated [] as empty,
+// allowing the communication-specific preflight to pass before backend writes.
+const malformedCommunicationReadMetadataCases = [
+  ["empty recipient error array", { communication_recipients: [] }],
+  ["empty communication error object", { communications: {} }],
+  ["null recipient error", { communication_recipients: null }],
+  ["blank communication error", { communications: " " }],
+  ["malformed top-level array", []],
+  ["malformed top-level string", "invalid metadata"],
+];
+for (const [label, backendReadErrors] of malformedCommunicationReadMetadataCases) {
+  const malformedMetadataBackup = { ...completeBackup, backendReadErrors };
+  assert.match(
+    getCommunicationRecipientLedgerRestoreBlockReason(malformedMetadataBackup),
+    /registro completo/i,
+    `malformed communication read metadata (${label}) must block before any backend restore write`,
+  );
+}
 
 const completeBackupWithUnrelatedReadError = {
   ...completeBackup,
