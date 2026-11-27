@@ -36,7 +36,7 @@ export async function uploadFilesWithRollback(storage, bucketName, files, create
       });
 
       if (response?.error) {
-        ambiguousUploadPath = null;
+        if (isDefinitiveStorageRejection(response.error)) ambiguousUploadPath = null;
         throw new Error("Impossibile memorizzare \"" + file.name + "\": " + response.error.message);
       }
       if (!response || typeof response !== "object" ||
