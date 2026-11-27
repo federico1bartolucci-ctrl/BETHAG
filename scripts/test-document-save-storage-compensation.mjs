@@ -165,4 +165,17 @@ const file = { name: "verbale.pdf", size: 123, type: "application/pdf" };
   assert.equal(result.document.storagePath, "existing.pdf");
 }
 
+const [mainSource, backendSource, packageSource] = await Promise.all([
+  import("node:fs/promises").then(({ readFile }) => readFile("src/main.tsx", "utf8")),
+  import("node:fs/promises").then(({ readFile }) => readFile("src/lib/bethagBackend.ts", "utf8")),
+  import("node:fs/promises").then(({ readFile }) => readFile("package.json", "utf8").then(JSON.parse)),
+]);
+assert.match(mainSource, /saveDocumentWithStorage\(/);
+assert.match(mainSource, /persistDocument: \(item\) => saveWorkspaceDocumentRecord\(/);
+assert.match(mainSource, /backendSyncSnapshot\.current = \{/);
+assert.match(backendSource, /export async function saveWorkspaceDocumentRecord/);
+assert.match(backendSource, /return enqueueBackendSync\(async \(\) => \{/);
+assert.match(backendSource, /persistDocumentRecordWithVerification\(/);
+assert.match(packageSource.scripts.test, /test-document-save-storage-compensation\.mjs/);
+
 console.log("Document metadata persistence, ambiguous-write verification and Storage compensation regression checks passed");
