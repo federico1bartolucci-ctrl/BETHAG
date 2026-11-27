@@ -12,6 +12,7 @@ import { loadAccountingUnitMembers } from "./lib/accountingMemberLookup.mjs";
 import { calculateLedgerExpensePaid } from "./lib/accountingExpensePaidSummary.js";
 import { calculateRendicontoUnitBalances } from "./lib/accountingRendicontoUnitBalance.js";
 import { millesimalTableScopeMatchesUnit } from "./lib/millesimalTableScope.mjs";
+import { persistFiscalYearRecord } from "./lib/fiscalYearSave.mjs";
 
 type Condominium = {
   id: number;
@@ -746,22 +747,13 @@ function AccountingPage({
 
   async function saveYear(e: React.FormEvent) {
     e.preventDefault();
-    if (editingYear && isFiscalYearClosed(editingYear.id)) {
-      setError("Un esercizio chiuso non può essere riaperto o modificato.");
-      return;
-    }
     if (!supabase || !dbCondominiumId) return;
-    if (!yearForm.name.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(yearForm.start_date) || !/^\d{4}-\d{2}-\d{2}$/.test(yearForm.end_date) || !Number.isFinite(Date.parse(yearForm.start_date)) || !Number.isFinite(Date.parse(yearForm.end_date))) {
+    if (!yearForm.name.trim() || !/^\\d{4}-\\d{2}-\\d{2}$/.test(yearForm.start_date) || !/^\\d{4}-\\d{2}-\\d{2}$/.test(yearForm.end_date) || !Number.isFinite(Date.parse(yearForm.start_date)) || !Number.isFinite(Date.parse(yearForm.end_date))) {
       setError("Inserisci un nome e date di esercizio valide.");
       return;
     }
     if (yearForm.start_date > yearForm.end_date) {
       setError("La data di inizio esercizio non può essere successiva alla data di fine.");
-      return;
-    }
-    const overlappingYear = scopedYears.find(y => y.condominium_id === dbCondominiumId && y.id !== editingYear?.id && yearForm.start_date <= y.end_date && yearForm.end_date >= y.start_date);
-    if (overlappingYear) {
-      setError("Il periodo si sovrappone a un altro esercizio contabile del condominio.");
       return;
     }
     const openingBalance = Number(yearForm.opening_balance);
@@ -771,17 +763,16 @@ function AccountingPage({
     }
     setSaving(true);
     setError("");
+    let fiscalYearSaved = false;
     try {
-      const payload = {
-        workspace_id: workspaceId,
-        condominium_id: dbCondominiumId,
-        ...yearForm,
-        opening_balance: openingBalance,
-      };
-      const { error: saveError } = await supabase
-        .from("condominium_fiscal_years")
-        .upsert(payload, { onConflict: "condominium_id,start_date,end_date" });
-      if (saveError) throw saveError;
+      await persistFiscalYearRecord({
+        supabase,
+        workspaceId,
+        condominiumId: dbCondominiumId,
+        yearForm: { ...yearForm, opening_balance: openingBalance },
+        existingYears: fiscalYears,
+      });
+      fiscalYearSaved = true;
       setShowYearForm(false);
       setYearForm({
         name: "",
@@ -791,16 +782,17 @@ function AccountingPage({
         opening_balance: 0,
         notes: "",
       });
-      const savedYear = (await supabase.from("condominium_fiscal_years").select("id").eq("workspace_id", workspaceId).eq("condominium_id", dbCondominiumId).eq("start_date", yearForm.start_date).eq("end_date", yearForm.end_date).single()).data;
-      const previousYear = fiscalYears.filter(y => y.condominium_id === dbCondominiumId && y.status === "Chiuso" && y.end_date < yearForm.start_date).sort((a,b) => b.end_date.localeCompare(a.end_date))[0];
-      if (previousYear && savedYear?.id) {
-        const { error: carryError } = await supabase.rpc("generate_fiscal_year_carryovers", { p_workspace_id: workspaceId, p_condominium_id: dbCondominiumId, p_source_fiscal_year_id: previousYear.id, p_target_fiscal_year_id: savedYear.id });
-        if (carryError) throw carryError;
-      }
       flash("Esercizio salvato.");
       await load();
     } catch (e: any) {
-      setError(e?.message || "Impossibile salvare l'esercizio.");
+      if (e?.code === "FISCAL_YEAR_OVERLAP") {
+        setError("Il periodo si sovrappone a un altro esercizio contabile del condominio.");
+      } else if (e?.fiscalYearSaved || fiscalYearSaved) {
+        const failedStep = e?.fiscalYearSaved ? "il riporto delle partite" : "l'aggiornamento della vista";
+        setError("Esercizio salvato, ma " + failedStep + " non è riuscito: " + (e?.message || "errore non specificato") + ". Verifica i dati prima di proseguire.");
+      } else {
+        setError(e?.message || "Impossibile salvare l'esercizio.");
+      }
     } finally {
       setSaving(false);
     }
