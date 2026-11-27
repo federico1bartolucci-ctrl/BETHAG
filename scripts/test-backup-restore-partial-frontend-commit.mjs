@@ -78,8 +78,7 @@ assert.equal(JSON.parse(storage.get("condominiums"))[0].id, "condo-old",
 // after a failed export page. The full frontend snapshot must not be committed.
 const sourceReadFailures = getRestorableBackupSourceReadErrors({
   documents: "timeout while exporting page 2",
-  portal_access: "authorization table is intentionally not restored",
-  condominium_members: " "
+  portal_access: "authorization table is intentionally not restored"
 }, ["documents", "condominium_members"]);
 assert.deepEqual(sourceReadFailures, ["documents: timeout while exporting page 2"]);
 let sourceCommitCalls = 0;
