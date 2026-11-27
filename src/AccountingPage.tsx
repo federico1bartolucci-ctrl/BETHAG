@@ -115,9 +115,10 @@ type CarryoverCompensation = { id:string; condominium_id:string; carryover_id:st
 type Tab = "rendiconto" | "movimenti" | "ripartizioni" | "millesimi" | "consumi" | "rate" | "fondi" | "fiscale" | "contenzioso" | "impostazioni" | "subentri";
 type AccountingSettings = { id:string; condominium_id:string; accounting_start_date:string; accounting_end_date:string; ordinary_installment_count:number; ordinary_due_dates:string[]; extraordinary_mode:"integrata"|"separata"; extraordinary_allow_multi_year:boolean; };
 
-const emptyLedger: Omit<LedgerEntry, "id" | "condominium_id"> = {
+function createEmptyLedger(date = new Date()): Omit<LedgerEntry, "id" | "condominium_id"> {
+  return {
   fiscal_year_id: null,
-  entry_date: localISODate(),
+  entry_date: localISODate(date),
   direction: "Uscita",
   expense_type: "Ordinaria",
   category: "Manutenzione",
@@ -131,7 +132,9 @@ const emptyLedger: Omit<LedgerEntry, "id" | "condominium_id"> = {
   document_id: null,
   fund_id: null,
   notes: "",
-};
+
+  };
+}
 
 function hasCentPrecision(value: number) {
   return Number.isFinite(value) && Math.abs(value * 100 - Math.round(value * 100)) < 1e-7;
@@ -197,7 +200,7 @@ function AccountingPage({
   const [showInstallmentForm, setShowInstallmentForm] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentInstallment, setPaymentInstallment] = useState<Installment | null>(null);
-  const [paymentForm, setPaymentForm] = useState({ payment_date:new Date().toISOString().slice(0,10), amount:0, method:"Bonifico", reference:"", notes:"" });
+  const [paymentForm, setPaymentForm] = useState({ payment_date:localISODate(), amount:0, method:"Bonifico", reference:"", notes:"" });
   const [showMillesimalValueForm, setShowMillesimalValueForm] = useState(false);
   const [showBulkMillesimalForm, setShowBulkMillesimalForm] = useState(false);
   const [bulkMillesimalTableId, setBulkMillesimalTableId] = useState("");
@@ -245,7 +248,7 @@ function AccountingPage({
     opening_balance: 0,
     notes: "",
   });
-  const [ledgerForm, setLedgerForm] = useState({ ...emptyLedger });
+  const [ledgerForm, setLedgerForm] = useState(createEmptyLedger());
   const [fundForm, setFundForm] = useState({
     name: "",
     purpose: "",
@@ -267,7 +270,7 @@ function AccountingPage({
     title: "",
     counterpart: "",
     status: "Aperto",
-    opened_date: new Date().toISOString().slice(0, 10),
+    opened_date: localISODate(),
     closed_date: "",
     notes: "",
   });
@@ -883,7 +886,7 @@ function AccountingPage({
       }
       setEditingLedger(null);
       setShowLedgerForm(false);
-      setLedgerForm({ ...emptyLedger });
+      setLedgerForm(createEmptyLedger());
       flash("Movimento contabile salvato.");
       await load();
     } catch (e: any) {
@@ -1757,7 +1760,7 @@ function AccountingPage({
       });
       if(paymentError) throw paymentError;
       setShowPaymentForm(false); setPaymentInstallment(null);
-      setPaymentForm({payment_date:new Date().toISOString().slice(0,10),amount:0,method:"Bonifico",reference:"",notes:""});
+      setPaymentForm({payment_date:localISODate(),amount:0,method:"Bonifico",reference:"",notes:""});
       flash("Pagamento registrato. Nuovo totale pagato: " + money(Number(data || 0)) + ".");
       await load();
     } catch(e:any){setError(e?.message || "Impossibile registrare il pagamento.");}
@@ -1865,7 +1868,7 @@ function AccountingPage({
     } else {
       setEditingLedger(null);
       setLedgerForm({
-        ...emptyLedger,
+        ...createEmptyLedger(),
         fiscal_year_id: scopedYears[0]?.id ?? null,
       });
     }
