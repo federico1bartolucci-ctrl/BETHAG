@@ -15,7 +15,9 @@ assert.equal(
   2,
   "both initial and reset payment dates must use the local calendar",
 );
-assert.ok(accounting.includes("opened_date: localISODate()"), "new legal cases must default to the local calendar date");
+assert.ok(accounting.includes("function createEmptyCaseForm(date = new Date())"), "new legal cases must use a fresh form factory");
+assert.ok(accounting.includes("useState(createEmptyCaseForm())"), "initial legal case state must use the factory");
+assert.ok(accounting.includes("opened_date: localISODate(date)"), "new legal cases must default to the local calendar date");
 assert.ok(!accounting.includes("new Date().toISOString().slice(0,10)"));
 assert.ok(!accounting.includes("new Date().toISOString().slice(0, 10)"));
 
