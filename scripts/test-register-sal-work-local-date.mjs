@@ -47,6 +47,8 @@ console.log(JSON.stringify({
   novemberOldUtcPlusThirty: new Date(lateNovember.getTime() + 30 * 86400000).toISOString().slice(0, 10),
   dstLocal: localISODate(dstBoundary),
   dstPlusSevenCalendarDays: localISODateAfterDays(7, dstBoundary),
+  dstPlusThirtyCalendarDays: localISODateAfterDays(30, dstBoundary),
+  dstOldUtcPlusThirty: new Date(dstBoundary.getTime() + 30 * 86400000).toISOString().slice(0, 10),
   dstOldUtcPlusSeven: new Date(dstBoundary.getTime() + 7 * 86400000).toISOString().slice(0, 10),
 }));
 `;
@@ -60,6 +62,8 @@ assert.deepEqual(JSON.parse(output), {
   novemberOldUtcPlusThirty: "2026-12-23",
   dstLocal: "2026-03-29",
   dstPlusSevenCalendarDays: "2026-04-05",
+  dstPlusThirtyCalendarDays: "2026-04-28",
+  dstOldUtcPlusThirty: "2026-04-27",
   dstOldUtcPlusSeven: "2026-04-04",
 }, "Register dates must follow local calendar days around midnight and DST");
 
