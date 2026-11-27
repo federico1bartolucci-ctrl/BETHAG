@@ -21,8 +21,16 @@ export function formatBackupReadErrors(errors) {
  */
 export function getCommunicationRecipientLedgerRestoreBlockReason(backup) {
   const isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
-  const hasReadError = (errors, key) =>
-    isRecord(errors) && errors[key] != null && String(errors[key]).trim().length > 0;
+  // Missing metadata is compatible with legacy backups. Once a metadata
+  // object is present, however, the presence of either communication-table
+  // key means that export recorded a failure or supplied malformed evidence.
+  // Do not coerce values: String([]), String({}) and String(null) can hide
+  // malformed JSON values and allow an incomplete recipient ledger through.
+  const hasReadError = (errors, key) => {
+    if (errors === undefined || errors === null) return false;
+    if (!isRecord(errors)) return true;
+    return Object.prototype.hasOwnProperty.call(errors, key);
+  };
 
   if (!isRecord(backup)) return "";
 
