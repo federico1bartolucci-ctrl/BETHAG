@@ -2,6 +2,10 @@ const MAX_PENDING_PATHS = 512;
 const RETRY_AFTER_TTL_MS = 60_000;
 
 const pendingRetryAfterByPath = new Map();
+// If the bounded per-path map overflows, retain the strongest evicted active
+// deadline in one conservative fallback. This can delay unrelated cleanup
+// while under pressure, but it must never permit a retry before Retry-After.
+let overflowRetryAfter = null;
 
 function getRequestUrl(input) {
   if (typeof input === "string") return input;
@@ -64,10 +68,34 @@ function parseRetryAfterDeadline(value, now) {
   return Number.isFinite(timestamp) ? Math.max(now, timestamp) : null;
 }
 
+function pruneExpiredRetryAfter(now) {
+  for (const [path, entry] of pendingRetryAfterByPath) {
+    if (entry.expiresAt <= now) pendingRetryAfterByPath.delete(path);
+  }
+  if (overflowRetryAfter && overflowRetryAfter.expiresAt <= now) {
+    overflowRetryAfter = null;
+  }
+}
+
+function retainOverflowRetryAfter(entry, now) {
+  if (!entry || entry.retryAt <= now) return;
+
+  const previousRetryAt =
+    overflowRetryAfter && overflowRetryAfter.expiresAt > now && overflowRetryAfter.retryAt > now
+      ? overflowRetryAfter.retryAt
+      : 0;
+  const retryAt = Math.max(previousRetryAt, entry.retryAt);
+  overflowRetryAfter = {
+    retryAt,
+    expiresAt: Math.max(now + RETRY_AFTER_TTL_MS, retryAt + RETRY_AFTER_TTL_MS),
+  };
+}
+
 function recordRetryAfter(path, value) {
   const now = Date.now();
   const retryAt = parseRetryAfterDeadline(value, now);
   if (retryAt === null) return;
+  pruneExpiredRetryAfter(now);
 
   const current = pendingRetryAfterByPath.get(path);
   const currentRetryAt = current?.expiresAt > now ? current.retryAt : 0;
@@ -87,6 +115,7 @@ function recordRetryAfter(path, value) {
   while (pendingRetryAfterByPath.size > MAX_PENDING_PATHS) {
     const oldestPath = pendingRetryAfterByPath.keys().next().value;
     if (oldestPath === undefined) break;
+    retainOverflowRetryAfter(pendingRetryAfterByPath.get(oldestPath), now);
     pendingRetryAfterByPath.delete(oldestPath);
   }
 }
@@ -124,10 +153,7 @@ export function createStorageRetryAfterFetch(fetchImpl) {
  */
 export function readStorageRetryAfter(error, path) {
   const now = Date.now();
-  const captured = pendingRetryAfterByPath.get(path);
-  if (captured && captured.expiresAt <= now) {
-    pendingRetryAfterByPath.delete(path);
-  }
+  pruneExpiredRetryAfter(now);
 
   const directValues = [
     error?.retryAfter,
@@ -144,6 +170,7 @@ export function readStorageRetryAfter(error, path) {
   const current = pendingRetryAfterByPath.get(path);
   const deadlines = [
     current && current.expiresAt > now ? current.retryAt : null,
+    overflowRetryAfter && overflowRetryAfter.expiresAt > now ? overflowRetryAfter.retryAt : null,
     ...directDeadlines,
   ].filter((value) => value !== null);
 
