@@ -95,7 +95,7 @@ export async function saveDocumentWithStorage({
   }
 
   try {
-    await persistDocument(nextDocument);
+    await persistDocument(nextDocument, previousDocument);
   } catch (error) {
     if (uploadedPath && !error?.persistenceUncertain) {
       try {

@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 import { uploadFilesWithRollback } from "./documentStorageUpload.js";
 import { persistDocumentRecordWithVerification } from "./documentSaveFlow.mjs";
+import { updateDocumentRecordIfStorageVersionMatches } from "./documentRecordCompareAndSwap.mjs";
 import { parseInvoiceDate } from "./invoiceDate.mjs";
 import { resolveActiveWorkspaceId } from "./preferredWorkspaceResolution.mjs";
 import { loadExistingCondominiumUnits, requireCondominiumUnitRenameResult } from "./condominiumUnitGeneration.mjs";
@@ -946,10 +947,13 @@ async function upsertRows(table: string, rows: any[], onConflict = "workspace_id
   if (error) throw error;
 }
 
-export async function saveWorkspaceDocumentRecord(workspaceId: string, item: any) {
+export async function saveWorkspaceDocumentRecord(workspaceId: string, item: any, previousDocument: any = null) {
   if (!supabase) throw new Error("Supabase non configurato.");
   if (!workspaceId || !item?.id || !item?.condominiumId) {
     throw new Error("Workspace, documento o condominio non validi.");
+  }
+  if (previousDocument && String(previousDocument.id) !== String(item.id)) {
+    throw new Error("Il documento in modifica non corrisponde al record selezionato.");
   }
 
   return enqueueBackendSync(async () => {
@@ -961,6 +965,25 @@ export async function saveWorkspaceDocumentRecord(workspaceId: string, item: any
       .maybeSingle();
     if (condominiumError) throw condominiumError;
     if (!condominium?.id) throw new Error("Condominio del documento non trovato sul server.");
+
+    let previousCondominiumId = null;
+    if (previousDocument) {
+      if (String(previousDocument.condominiumId) === String(item.condominiumId)) {
+        previousCondominiumId = condominium.id;
+      } else {
+        const { data: previousCondominium, error: previousCondominiumError } = await supabase
+          .from("condominiums")
+          .select("id")
+          .eq("workspace_id", workspaceId)
+          .eq("legacy_id", previousDocument.condominiumId)
+          .maybeSingle();
+        if (previousCondominiumError) throw previousCondominiumError;
+        if (!previousCondominium?.id) {
+          throw new Error("Il condominio originale del documento non è più disponibile. Ricarica i dati prima di riprovare.");
+        }
+        previousCondominiumId = previousCondominium.id;
+      }
+    }
 
     const row = {
       workspace_id: workspaceId,
@@ -975,7 +998,23 @@ export async function saveWorkspaceDocumentRecord(workspaceId: string, item: any
 
     return persistDocumentRecordWithVerification({
       document: row,
-      write: () => upsertRows("documents", [row]),
+      write: async () => {
+        if (previousDocument) {
+          return updateDocumentRecordIfStorageVersionMatches(supabase, row, {
+            expectedCondominiumId: previousCondominiumId,
+            expectedStoragePath: previousDocument.storagePath ?? null,
+          });
+        }
+
+        const { data, error } = await supabase
+          .from("documents")
+          .insert(row)
+          .select("legacy_id")
+          .single();
+        if (error) throw error;
+        if (!data?.legacy_id) throw new Error("Inserimento documento non confermato dal database.");
+        return data;
+      },
       read: async () => {
         const { data, error } = await supabase
           .from("documents")

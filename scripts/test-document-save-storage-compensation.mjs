@@ -171,7 +171,7 @@ const [mainSource, backendSource, packageSource] = await Promise.all([
   import("node:fs/promises").then(({ readFile }) => readFile("package.json", "utf8").then(JSON.parse)),
 ]);
 assert.match(mainSource, /saveDocumentWithStorage\(/);
-assert.match(mainSource, /persistDocument: \(item\) => saveWorkspaceDocumentRecord\(/);
+assert.match(mainSource, /persistDocument: \(item, previousDocument\) => saveWorkspaceDocumentRecord\(profile\.workspaceId, item, previousDocument\)/);
 assert.match(mainSource, /backendSyncSnapshot\.current = \{/);
 assert.match(backendSource, /export async function saveWorkspaceDocumentRecord/);
 assert.match(backendSource, /return enqueueBackendSync\(async \(\) => \{/);
