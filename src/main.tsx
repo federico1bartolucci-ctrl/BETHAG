@@ -5,6 +5,7 @@ import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { runGuardedFormSubmit } from "./lib/guarded-form-submit.js";
+import { saveDocumentWithStorage } from "./lib/documentSaveFlow.mjs";
 import { updateInsurancePolicy, deleteInsurancePolicy } from "./lib/insurancePolicyMutations.mjs";
 import { createLatestRequestGuard } from "./lib/latestRequestGuard.mjs";
 import { applyInsurancePoliciesLoadFailure, selectVisibleInsurancePolicies } from "./lib/insurancePolicyLoadState.mjs";
@@ -18,7 +19,7 @@ import { getAuthoritativeEntitlementSubscription, getClientUnlockedAddons, hasAd
 import { applyWorkspacePlanSnapshot } from "./lib/workspace-plan-snapshot.js";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
-  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, getWorkspacePlan, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveWorkspaceDocumentRecord, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, getWorkspacePlan, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -4462,48 +4463,50 @@ function App() {
       return;
     }
 
+    const documentId = selectedDocument?.id ?? makeId();
     let documentData: DocumentItem = {
       ...documentForm,
+      id: documentId,
       name: documentForm.name.trim(),
       size: selectedFileName ? documentForm.size || "File locale" : documentForm.size,
     };
 
-    if (selectedDocumentFile && supabaseConfigured && profile.workspaceId) {
+    if (supabaseConfigured) {
+      if (!profile.workspaceId) {
+        alert("Workspace attivo non disponibile. Il documento non è stato salvato.");
+        return;
+      }
+
       try {
-        const stored = await storeWorkspaceDocuments(profile.workspaceId, [selectedDocumentFile], documentForm.condominiumId);
-        const uploaded = stored[0];
-        documentData = {
-          ...documentData,
-          storagePath: uploaded?.path ?? "",
-          fileSizeBytes: selectedDocumentFile.size,
-          mimeType: selectedDocumentFile.type || "application/octet-stream",
-        };
+        const result = await saveDocumentWithStorage({
+          document: documentData,
+          previousDocument: selectedDocument,
+          file: selectedDocumentFile,
+          uploadFiles: (files) => storeWorkspaceDocuments(profile.workspaceId, files, documentForm.condominiumId),
+          persistDocument: (item) => saveWorkspaceDocumentRecord(profile.workspaceId, item),
+          deleteStoredFile: deleteWorkspaceStoredFile,
+        });
+        documentData = result.document;
+        if (result.cleanupWarning) {
+          console.warn("BETHAG previous document file cleanup incomplete", result.cleanupWarning);
+        }
       } catch (error: any) {
-        alert(error?.message || "Impossibile memorizzare il file.");
+        alert(error?.message || "Impossibile salvare il documento.");
         return;
       }
     }
 
-    if (selectedDocument) {
-      setDocuments((current) =>
-        current.map((item) =>
-          item.id === selectedDocument.id
-            ? {
-                ...documentData,
-                id: selectedDocument.id,
-              }
-            : item
-        )
-      );
-    } else {
-      setDocuments((current) => [
-        {
-          ...documentData,
-          id: makeId(),
-        },
-        ...current,
-      ]);
+    const nextDocuments = selectedDocument
+      ? documents.map((item) => item.id === selectedDocument.id ? documentData : item)
+      : [documentData, ...documents];
+
+    if (supabaseConfigured && profile.workspaceId) {
+      backendSyncSnapshot.current = {
+        ...(backendSyncSnapshot.current ?? currentBackendSyncState()),
+        documents: nextDocuments,
+      };
     }
+    setDocuments(nextDocuments);
 
     setDocumentForm({
       ...emptyDocument,
