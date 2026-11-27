@@ -53,7 +53,7 @@ assert.equal(prepared.rows[0].unit_id, "unit-1");
 
 const mixedLocaleHeaders = "Unita;Esercizio;Lettura precedente;Lettura attuale;Consumo;Importo";
 function prepareMixedLocale(values) {
-  return prepareConsumptionCsvImport(mixedLocaleHeaders + "\\n" + values.join(";"), {
+  return prepareConsumptionCsvImport(mixedLocaleHeaders + "\n" + values.join(";"), {
     workspaceId: "workspace-1",
     condominiumId: "condo-1",
     units,
