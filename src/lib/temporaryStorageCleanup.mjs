@@ -1,10 +1,42 @@
 const DEFAULT_MAX_CONCURRENT_REMOVALS = 5;
+const DEFAULT_RETRY_BASE_DELAY_MS = 250;
+const DEFAULT_RETRY_MAX_DELAY_MS = 5000;
+
+function readRetryAfterMs(error) {
+  if (Number.isFinite(error?.retryAfterMs)) return Math.max(0, Number(error.retryAfterMs));
+
+  const headers = error?.headers ?? error?.context?.headers;
+  const value = error?.retryAfter ??
+    headers?.get?.("retry-after") ??
+    headers?.get?.("Retry-After") ??
+    headers?.["retry-after"] ??
+    headers?.["Retry-After"];
+  if (value === undefined || value === null || value === "") return null;
+
+  const text = String(value).trim();
+  if (/^\d+(?:\.\d+)?$/.test(text)) return Math.max(0, Number(text) * 1000);
+  const date = Date.parse(text);
+  return Number.isFinite(date) ? Math.max(0, date - Date.now()) : null;
+}
+
+function getRetryDelayMs(error, attempt, options) {
+  const exponentialCap = Math.min(options.maxDelayMs, options.baseDelayMs * (2 ** (attempt - 1)));
+  const randomValue = Math.min(1, Math.max(0, Number(options.random()) || 0));
+  const jitteredBackoff = Math.floor(exponentialCap * (0.5 + randomValue * 0.5));
+  const retryAfterMs = readRetryAfterMs(error);
+  const delayMs = Math.max(jitteredBackoff, retryAfterMs ?? 0);
+
+  // Do not retry earlier than the server's Retry-After instruction. If it
+  // exceeds the interactive cleanup budget, report the path as uncleaned.
+  return delayMs <= options.maxDelayMs ? delayMs : null;
+}
 
 export async function cleanupTemporaryStorageFiles(
   paths,
   removeFile,
   maxAttempts = 2,
   maxConcurrency = DEFAULT_MAX_CONCURRENT_REMOVALS,
+  retryOptions = {},
 ) {
   if (
     !Array.isArray(paths) ||
@@ -12,9 +44,27 @@ export async function cleanupTemporaryStorageFiles(
     !Number.isInteger(maxAttempts) ||
     maxAttempts < 1 ||
     !Number.isInteger(maxConcurrency) ||
-    maxConcurrency < 1
+    maxConcurrency < 1 ||
+    !retryOptions ||
+    typeof retryOptions !== "object" ||
+    Array.isArray(retryOptions)
   ) {
     throw new TypeError("Contesto di pulizia Storage temporanea non valido.");
+  }
+
+  const options = {
+    baseDelayMs: retryOptions.baseDelayMs ?? DEFAULT_RETRY_BASE_DELAY_MS,
+    maxDelayMs: retryOptions.maxDelayMs ?? DEFAULT_RETRY_MAX_DELAY_MS,
+    sleep: retryOptions.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms))),
+    random: retryOptions.random ?? Math.random,
+  };
+  if (
+    !Number.isFinite(options.baseDelayMs) || options.baseDelayMs < 0 ||
+    !Number.isFinite(options.maxDelayMs) || options.maxDelayMs < options.baseDelayMs ||
+    typeof options.sleep !== "function" ||
+    typeof options.random !== "function"
+  ) {
+    throw new TypeError("Parametri di retry Storage non validi.");
   }
 
   const uniquePaths = [...new Set(paths.filter((path) => typeof path === "string" && path.trim()))];
@@ -43,6 +93,10 @@ export async function cleanupTemporaryStorageFiles(
             const status = Number(error?.status);
             const retryable = !Number.isInteger(status) || status >= 500 || status === 408 || status === 429;
             if (!retryable || attempt === maxAttempts) break;
+
+            const delayMs = getRetryDelayMs(error, attempt, options);
+            if (delayMs === null) break;
+            if (delayMs > 0) await options.sleep(delayMs);
           }
         }
 
