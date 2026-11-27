@@ -166,6 +166,6 @@ assert.doesNotMatch(saveYearHandler, /\beditingYear\b/, "saveYear must not refer
 assert.match(saveYearHandler, /persistFiscalYearRecord/, "saveYear must use the runtime-tested persistence helper");
 assert.match(saveYearHandler, /let fiscalYearSaved = false/, "saveYear must track confirmed persistence");
 assert.match(saveYearHandler, /fiscalYearSaved = true/, "saveYear must mark the confirmed upsert before later steps");
-assert.match(saveYearHandler, /e\\?\\.fiscalYearSaved \\|\\| fiscalYearSaved/, "saveYear must report carryover and refresh failures as partial success");
+assert.ok(saveYearHandler.includes("e?.fiscalYearSaved || fiscalYearSaved"), "saveYear must report carryover and refresh failures as partial success");
 
 console.log("Fiscal-year save and carryover runtime regression: PASS");
