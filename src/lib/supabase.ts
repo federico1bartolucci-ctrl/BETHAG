@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { createStorageRetryAfterFetch } from "./storageRetryAfterBridge.mjs";
 
 const configuredFlag = import.meta.env.VITE_SUPABASE_ENABLE as string | undefined;
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
@@ -9,7 +10,10 @@ const supabasePublishableKey =
 export const supabaseConfigured =
   configuredFlag !== "false" && Boolean(supabaseUrl && supabasePublishableKey);
 
+const storageAwareFetch = createStorageRetryAfterFetch((input, init) => fetch(input, init));
+
 const clientOptions = {
+  global: { fetch: storageAwareFetch },
   auth: {
     persistSession: true,
     autoRefreshToken: true,
