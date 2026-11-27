@@ -261,3 +261,8 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_resend_aggregate_test
 
+      - name: Reproduce concurrent condominium member owner-reference writes on isolated PostgreSQL 17
+        run: node scripts/test-postgres-member-owner-reference-concurrency.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_clean_install_test
+
