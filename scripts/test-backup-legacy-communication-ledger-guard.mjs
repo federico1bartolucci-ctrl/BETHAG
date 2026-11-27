@@ -18,7 +18,7 @@ const firstConfirmation = restoreHandler.indexOf("window.confirm");
 const restoreOrderDeclaration = restoreHandler.indexOf("const restoreOrder = WORKSPACE_BACKUP_RESTORE_ORDER;");
 const backendRestoreLoop = restoreHandler.indexOf("if (supabase) {", restoreOrderDeclaration);
 const firstFrontendMutation = restoreHandler.indexOf('apply("condominiums"');
-const firstLocalStorageWrite = restoreHandler.indexOf("localStorage.setItem");
+const firstLocalStorageWrite = restoreHandler.indexOf("restoreBackupLocalStorageData(");
 assert.ok(guardCall >= 0, "restore must call the legacy recipient-ledger guard");
 assert.ok(firstConfirmation > guardCall, "legacy backup guard must run before user confirmation");
 assert.ok(restoreOrderDeclaration > firstConfirmation && backendRestoreLoop > restoreOrderDeclaration,
