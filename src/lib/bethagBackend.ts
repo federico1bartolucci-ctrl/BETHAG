@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { loadExistingCondominiumUnits, requireCondominiumUnitRenameResult } from "./condominiumUnitGeneration.mjs";
 import { loadCondominiumWorkReconciliationRows } from "./workReconciliationPagination.mjs";
 import { parseInvoiceAmount } from "./invoiceAmount.mjs";
 import { loadCondominiumWorkDeletionRows } from "./workDeletionGuardPagination.mjs";
@@ -1347,12 +1348,11 @@ export async function saveCondominium(
     const requestedUnits = Math.max(0, Number(item.units) || 0);
 
     if (requestedUnits > 0 && !item.structure?.configured) {
-      const { data: existingUnits, error: existingUnitsError } = await supabase
-        .from("condominium_units")
-        .select("id, unit_code, data")
-        .eq("condominium_id", condominiumDbId);
-
-      if (existingUnitsError) throw existingUnitsError;
+      const existingUnits = await loadExistingCondominiumUnits(
+        supabase,
+        condominiumDbId,
+        activeWorkspaceId,
+      );
 
       // Le unità residenziali iniziali hanno come codice l'interno numerico
       // (1, 2, 3, ...). Non usiamo più "Interno 1", perché il codice deve
@@ -1370,19 +1370,22 @@ export async function saveCondominium(
         if (exact) continue;
 
         if (legacy) {
-          const { error: renameError } = await supabase
-            .from("condominium_units")
-            .update({
-              unit_code: code,
-              data: {
-                ...(legacy.data ?? {}),
-                unitCode: code,
-              },
-            })
-            .eq("id", legacy.id)
-            .eq("condominium_id", condominiumDbId);
-
-          if (renameError) throw renameError;
+          await requireCondominiumUnitRenameResult(
+            supabase
+              .from("condominium_units")
+              .update({
+                unit_code: code,
+                data: {
+                  ...(legacy.data ?? {}),
+                  unitCode: code,
+                },
+              })
+              .eq("id", legacy.id)
+              .eq("condominium_id", condominiumDbId)
+              .eq("workspace_id", activeWorkspaceId),
+            legacy.id,
+            code,
+          );
           continue;
         }
 
