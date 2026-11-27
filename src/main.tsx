@@ -4286,6 +4286,7 @@ function App() {
       return;
     }
 
+    let deletionOutcome: { databaseDeleted: boolean; storageDeleted: boolean; failedStoragePaths: string[]; storageErrors: Array<{ message: string }> } | null = null;
     if (supabaseConfigured && supabase && (sessionRole === "admin" || sessionRole === "collaborator")) {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -4294,7 +4295,8 @@ function App() {
         const workspaceId = await getActiveWorkspaceId(session.user.id, profile.workspaceId);
         if (!workspaceId) throw new Error("Workspace amministratore non trovato.");
 
-        await deleteCondominiumBackend(workspaceId, item.id, securityCode);
+        deletionOutcome = await deleteCondominiumBackend(workspaceId, item.id, securityCode);
+        if (!deletionOutcome.databaseDeleted) throw new Error("Eliminazione del database non confermata.");
       } catch (error) {
         console.error("BETHAG condominium deletion failed", error);
         alert(error instanceof Error ? "Il condominio non è stato cancellato dal server.\n\n" + error.message : "Il condominio non è stato cancellato dal server. Riprova.");
@@ -4313,6 +4315,22 @@ function App() {
     setCondominiumMembers((current) => current.filter((member) => member.condominiumId !== item.id));
     setCondominiumRequests((current) => current.filter((request) => request.condominiumId !== item.id));
     selectCondominium(null);
+    if (deletionOutcome && !deletionOutcome.storageDeleted) {
+      console.error("BETHAG condominium deleted from database but Storage cleanup is incomplete", {
+        failedStoragePaths: deletionOutcome.failedStoragePaths,
+        storageErrors: deletionOutcome.storageErrors,
+      });
+      const pathPreview = deletionOutcome.failedStoragePaths.slice(0, 5).join("\n");
+      const remaining = Math.max(0, deletionOutcome.failedStoragePaths.length - 5);
+      alert(
+        "Il condominio è stato eliminato dal database e dall'elenco. Tuttavia, la pulizia di " +
+        deletionOutcome.failedStoragePaths.length +
+        " file nello Storage non è riuscita. È necessaria una verifica tecnica prima di considerare conclusa la cancellazione." +
+        (pathPreview ? "\n\nPercorsi non confermati:\n" + pathPreview : "") +
+        (remaining ? "\n... e altri " + remaining + " percorsi." : "") +
+        (deletionOutcome.storageErrors[0]?.message ? "\n\nErrore: " + deletionOutcome.storageErrors[0].message : "")
+      );
+    }
   };
 
 
