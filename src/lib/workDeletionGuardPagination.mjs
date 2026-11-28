@@ -49,8 +49,8 @@ export async function loadCondominiumWorkDeletionRows(client, table, workspaceId
       if (cursor !== null) query = query.gt("id", cursor);
       const { data, error } = await query.range(0, pageSize - 1);
       if (error) throw error;
-      if (data !== null && data !== undefined && !Array.isArray(data)) throw new Error("Pagina di eliminazione lavoro non valida.");
-      const page = data ?? [];
+      if (!Array.isArray(data)) throw new Error("Pagina di eliminazione lavoro non valida.");
+      const page = data;
       if (page.length > pageSize) throw new Error("Pagina di eliminazione lavoro oltre il limite.");
       for (const row of page) {
         if (row?.id === null || row?.id === undefined || !String(row.id).trim()) throw new Error("ID documento/lavoro mancante.");
