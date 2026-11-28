@@ -22,7 +22,7 @@ function sortRows(rows, column) {
   return rows.sort((a, b) => compareValues(a[column], b[column]) || compareIds(a.id, b.id));
 }
 
-function makeClient(initialRows, { insertBeforePage = null, inserts = [], deleteBeforePage = null, deleteIds = [], updateBeforePage = null, updates = [], failPage = null } = {}) {
+function makeClient(initialRows, { insertBeforePage = null, inserts = [], deleteBeforePage = null, deleteIds = [], updateBeforePage = null, updates = [], failPage = null, nullDataPage = null } = {}) {
   const records = initialRows.slice();
   const requests = [];
   let pageNumber = 0;
@@ -54,6 +54,7 @@ function makeClient(initialRows, { insertBeforePage = null, inserts = [], delete
             }
           }
           if (pageNumber === failPage) return Promise.resolve({ data: null, error: new Error("workspace page failure") });
+          if (pageNumber === nullDataPage) return Promise.resolve({ data: null, error: null });
           const orderColumn = state.orders[0]?.[0] ?? "created_at";
           let filtered = records.filter((row) => row.workspace_id === state.workspaceId);
           if (state.cursorFilter) {
@@ -253,6 +254,9 @@ await assert.rejects(loadWorkspacePaginatedRows(staticClient.client, "documents"
 const failing = makeClient(originals, { failPage: 2 });
 await assert.rejects(loadWorkspacePaginatedRows(failing.client, "documents", "workspace-1"), /workspace page failure/);
 assert.equal(failing.requests.length, 2);
+const nullData = makeClient(originals, { nullDataPage: 1 });
+await assert.rejects(loadWorkspacePaginatedRows(nullData.client, "documents", "workspace-1"), /Pagina workspace non valida/);
+assert.equal(nullData.requests.length, 1, "a successful SELECT response with null data must fail closed, not silently hydrate an empty workspace");
 
 // Joined condominium-member hydration must use keyset pagination while retaining the workspace relation filter.
 const memberRows = Array.from({ length: 1001 }, (_, i) => ({
