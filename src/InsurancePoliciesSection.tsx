@@ -4,6 +4,7 @@ import { deleteInsurancePolicy, updateInsurancePolicy } from "./lib/insurancePol
 import { applyInsurancePoliciesLoadFailure, selectVisibleInsurancePolicies } from "./lib/insurancePolicyLoadState.mjs";
 import { createLatestRequestGuard } from "./lib/latestRequestGuard.mjs";
 import { resolveInsurancePolicyCondominium } from "./lib/insurancePolicyCondominiumScope.mjs";
+import { validateInsurancePolicyForm } from "./lib/insurancePolicyValidation.mjs";
 
 type InsurancePolicy = {
   id: string;
@@ -164,8 +165,9 @@ export default function InsurancePoliciesSection({
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!supabase || !workspaceId || !dbCondominiumId) return;
-    if (!form.company_name.trim() || !form.policy_number.trim()) {
-      setError("Compila compagnia assicurativa e numero polizza.");
+    const validationError = validateInsurancePolicyForm(form);
+    if (validationError) {
+      setError(validationError);
       return;
     }
     setSaving(true);
