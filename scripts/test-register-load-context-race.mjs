@@ -44,6 +44,7 @@ assert.match(source, /if\(isCurrentRegisterLoad\(requestId,loadRequestRef\.curre
 assert.match(source, /return\(\)=>\{loadRequestRef\.current\+=1;\}/, "effect cleanup must invalidate outstanding requests");
 assert.match(source, /const contextIsLoaded=loadedContextKey===currentContextKey/, "data must be keyed to the current workspace and condominium");
 assert.match(source, /if\(supabase&&!contextIsLoaded\)/, "previous-context data must be hidden while the new context loads");
+assert.match(source, /setShowDocuments\(false\)[\s\S]*setDocumentWork\(null\)[\s\S]*setShowPayment\(false\)[\s\S]*setShowHistory\(false\)/, "context changes must close modals and discard selections from the previous condominium/workspace");
 assert.equal((packageJson.scripts.test.match(/test-register-load-context-race\.mjs/g)||[]).length, 1, "the regression must be registered exactly once in npm test");
 
 console.log("Register workspace/condominium stale-load isolation regression: PASS");
