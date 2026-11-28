@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { loadCondominiumWorkDeletionRows } from "../src/lib/workDeletionGuardPagination.mjs";
 
 const CAP = 1000;
-function makeClient(rowsByTable, { failTable = null, failPage = null } = {}) {
+function makeClient(rowsByTable, { failTable = null, failPage = null, nullDataTable = null, nullDataPage = null } = {}) {
   const calls = [];
   const counts = new Map();
   const client = { from(table) {
@@ -21,7 +21,12 @@ function makeClient(rowsByTable, { failTable = null, failPage = null } = {}) {
         const [from,to]=state.range??[0,CAP-1];
         const page=rows.slice(from,to+1);
         const error=state.range&&table===failTable&&state.pageNo===failPage?new Error("simulated later-page failure"):null;
-        return Promise.resolve({data:error?null:page,error}).then(resolve,reject);
+        const data = error
+          ? null
+          : state.range && table === nullDataTable && state.pageNo === nullDataPage
+            ? null
+            : page;
+        return Promise.resolve({data,error}).then(resolve,reject);
       }
     };return q;
   }};
@@ -76,6 +81,29 @@ docs.push({id:"foreign-doc",workspace_id:"ws-2",legacy_id:1001,category:"Fattura
  const {client,calls}=makeClient({condominium_work_documents:links},{failTable:"condominium_work_documents",failPage:2});
  await assert.rejects(loadCondominiumWorkDeletionRows(client,"condominium_work_documents",wid,work,{select:"id,document_id",pageSize:250}),/simulated later-page failure/);
  assert.equal(calls.length,2);
+}
+
+// A successful SELECT must return an array, including [] when no rows match.
+// A null data payload with no Supabase error is malformed and must not authorize deletion.
+{
+ const {client,calls}=makeClient(
+  {condominium_work_documents:links},
+  {nullDataTable:"condominium_work_documents",nullDataPage:1}
+ );
+ await assert.rejects(
+  loadCondominiumWorkDeletionRows(client,"condominium_work_documents",wid,work,{select:"id,document_id",pageSize:250}),
+  /Pagina di eliminazione lavoro non valida/
+ );
+ assert.equal(calls.length,1,"a malformed successful first page must stop the deletion guard");
+}
+
+// A legitimate zero-row SELECT remains a valid empty collection.
+{
+ const {client}=makeClient({});
+ const empty=await loadCondominiumWorkDeletionRows(
+  client,"condominium_work_documents",wid,work,{select:"id,document_id",pageSize:250}
+ );
+ assert.deepEqual(empty,[]);
 }
 
 // Production function must use the paginated loader for progress, links and invoice documents.
