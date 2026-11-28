@@ -1,0 +1,9 @@
+revoke all on function public.guard_confirmed_unit_transformation_immutable() from public;
+revoke all on function public.guard_confirmed_unit_transformation_items_immutable() from public;
+revoke all on function public.touch_documents_updated_at() from public;
+revoke all on function public.validate_communication_recipient_scope() from public;
+revoke all on function public.validate_condominium_allocation_intake_scope() from public;
+revoke all on function public.validate_condominium_consumption_reading_scope() from public;
+revoke all on function public.validate_condominium_request_status() from public;
+revoke all on function public.validate_document_ai_transition() from public;
+revoke all on function public.validate_document_metadata() from public;

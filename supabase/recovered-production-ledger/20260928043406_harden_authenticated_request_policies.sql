@@ -1,0 +1,15 @@
+alter policy "admins manage activities" on public.activities to authenticated;
+alter policy "admins manage assemblies" on public.assemblies to authenticated;
+alter policy "admins manage communications" on public.communications to authenticated;
+alter policy "admins manage condominium members" on public.condominium_members to authenticated;
+alter policy "admins manage requests" on public.condominium_requests to authenticated;
+alter policy "admins manage condominiums" on public.condominiums to authenticated;
+alter policy "admins manage deadlines" on public.deadlines to authenticated;
+alter policy "admins manage documents" on public.documents to authenticated;
+alter policy "admins manage suppliers" on public.suppliers to authenticated;
+alter policy "admins manage memberships" on public.workspace_members to authenticated;
+alter policy "members can read memberships" on public.workspace_members to authenticated;
+alter policy "admins can manage workspaces" on public.workspaces to authenticated;
+alter policy "users can read own profile" on public.profiles to authenticated;
+alter policy "users can update own profile" on public.profiles to authenticated;
+drop policy if exists "residents update own requests" on public.condominium_requests;

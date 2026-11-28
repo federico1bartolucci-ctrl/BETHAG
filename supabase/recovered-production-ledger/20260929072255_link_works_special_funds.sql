@@ -1,0 +1,1 @@
+alter table public.condominium_works add column if not exists fund_id uuid references public.condominium_funds(id) on delete set null; alter table public.condominium_works add column if not exists progress_percent numeric not null default 0; create index if not exists condominium_works_fund_idx on public.condominium_works(fund_id);

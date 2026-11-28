@@ -1,0 +1,2 @@
+drop policy if exists "Authorized condominium managers can delete units" on public.condominium_units;
+create policy "Authorized condominium managers can delete units" on public.condominium_units for delete to authenticated using ((select private.can_manage_workspace_module(condominium_units.workspace_id,'condomini'::text)));

@@ -1,0 +1,1 @@
+alter table public.condominium_work_documents alter column document_id type bigint using null;

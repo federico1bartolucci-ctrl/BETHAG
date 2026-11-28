@@ -1,0 +1,1 @@
+alter table public.condominium_members add constraint condominium_members_condominium_legacy_unique unique (condominium_id, legacy_id);

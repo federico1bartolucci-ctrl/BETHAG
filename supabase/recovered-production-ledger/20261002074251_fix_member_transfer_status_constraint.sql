@@ -1,0 +1,1 @@
+alter table public.condominium_member_transfers drop constraint if exists condominium_member_transfers_status_ck;

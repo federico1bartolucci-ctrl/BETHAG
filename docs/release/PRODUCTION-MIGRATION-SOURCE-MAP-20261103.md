@@ -285,3 +285,97 @@ These collisions must be reconciled before running the normal Supabase migration
 - `no-direct-source` and `ambiguous-name` require recovery from the frozen baseline/rebuild artifacts, historical commits, or the original applied SQL evidence.
 - Do not rewrite historical migration rows or blindly rename files to make counts match.
 - This inventory is a forensic map, not approval to deploy. The release remains NO-GO until each Production ledger entry is mapped to authoritative source and the migration directory has unique ordered versions.
+
+
+## 2026-11-03 follow-up: recoverability and live environment checks
+
+A direct read-only query of Production `supabase_migrations.schema_migrations` confirmed:
+
+- 247 total ledger rows.
+- 247 rows have a non-empty `statements` array.
+- 0 rows lack recorded SQL statements.
+- The ledger spans `20260928021707` through `20261103070901`.
+- No rollback payload is stored in the ledger (`rollback` is NULL for all 247 rows).
+
+This establishes that the exact applied SQL statement payloads are recoverable from the live Production migration ledger. It does **not** yet establish that every payload has been exported into Git or that every current source file is byte-for-byte identical. The next safe operation is to export the recorded statement arrays into a separate historical archive outside `supabase/migrations/`, preserving each ledger version and name. That archive must not be treated as deployable migration input.
+
+### Live Production and QA snapshots
+
+Read-only checks performed 2026-11-03:
+
+| Check | Production | QA branch `bethag-launch-qa` |
+|---|---:|---:|
+| Supabase project ref | `tctcgptrsmvgajqjgnev` | `jhuyhlzzydcgghrzeexn` |
+| Migration ledger rows | 247 | 47 |
+| Public columns | 626 | 627 |
+| Public RLS policies | 103 | 103 |
+| Public triggers | 274 | 274 |
+| Security Advisor lints | 0 | 0 |
+
+The sole previously identified public-column difference remains QA-only `workspace_members.data`; it was not removed because its purpose and dependencies have not been established.
+
+Supabase branch metadata reports `bethag-launch-qa` as `MIGRATIONS_FAILED`, despite the branch database accepting read-only SQL and returning its 47-row ledger and current schema inventory. This status must be diagnosed before treating the branch as a valid clean migration target. Do not reset, rebase, or merge it as a shortcut.
+
+Production Performance Advisor currently reports informational unused-index findings and 21 multiple-permissive-policy findings. These are performance review items, not security lints; no index or RLS policy was changed as part of this inspection.
+
+**Safety boundary:** no Production or QA schema/data was modified during these checks. No migration was applied, replayed, renamed, or deleted.
+
+
+## Source-content verification of the 21 version-prefix matches — 2026-11-03
+
+The label `exact-version` in the initial inventory means only that the Production ledger version equals the SQL filename's 14-digit prefix. It must **not** be interpreted as proof that the file content matches the SQL recorded as applied.
+
+A direct comparison of all 21 such candidate files against their corresponding Production `statements` payloads found:
+
+- **9/21** are equal after line-ending and whitespace normalization.
+- **12/21** differ even after whitespace normalization.
+- Several differences are material in size, not just formatting. Examples:
+  - `20260928153242_add_condomino_registration_workflow.sql`: repository file 3,223 characters; Production ledger SQL 10,468 characters.
+  - `20260929230529_harden_accounting_delete_and_allocation_scope.sql`: repository file 2,532 characters; Production ledger SQL 4,580 characters.
+  - `20261007072310_harden_trigger_function_security_for_launch.sql`: repository file 556 characters; Production ledger SQL 269 characters.
+  - `20261103070901_grant_service_role_private_resend_event_rpc.sql`: repository file 446 characters; Production ledger SQL 298 characters.
+
+Therefore, the earlier 21/247 figure is a filename/version-prefix match count only. It is **not** a count of verified source matches. Until the original SQL payloads are exported and compared, none of these 12 mismatched files can be assumed to represent the exact migration applied in Production. Do not run them again as migrations or use them as authoritative historical source.
+
+This finding strengthens the reason to archive the actual ledger statement arrays separately from the deployable migration directory.
+
+
+## Recovery execution completed — 2026-11-03
+
+- Exported **all 247/247** Production migration SQL payloads into `supabase/recovered-production-ledger/`.
+- Each archive filename is prefixed with the actual applied Production version and includes a sanitized ledger name.
+- Added `MANIFEST.csv` with all 247 versions, names, archive filenames, statement counts, SQL character counts, and database-computed MD5 values.
+- Verified archived file content lengths against the Production ledger for the first migration, the materially drifted `20260928153242` migration, and the latest Production migration `20261103070901`; all three matched exactly.
+- Verified the manifest contains 247 data rows.
+- The archive is kept outside `supabase/migrations/`; it is not an executable deployment sequence and no archived SQL has been replayed.
+- Work is isolated on branch `recovery/production-ledger-archive-20261103`; Production and QA were not modified.
+
+**Remaining migration work:** perform a complete 247-row source comparison, classify every current `supabase/migrations/` file against the recovered ledger payloads, reconcile the nine duplicate filename timestamps, and construct/test one unique ordered deployable migration directory on a disposable PostgreSQL 17 database. The recovered archive now provides the authoritative SQL evidence needed to do that safely.
+
+
+## Full candidate-file SQL comparison — 2026-11-03
+
+Compared every source file candidate listed in the initial map against the corresponding SQL payload from the Production ledger, normalizing line endings and whitespace only:
+
+| Candidate class | Compared | Normalized SQL matches | Content mismatches |
+|---|---:|---:|---:|
+| Filename prefix equals applied version (`exact-version`) | 21 | 9 | 12 |
+| Same ledger name, different filename timestamp (`same-name-different-version`) | 89 | 61 | 28 |
+| **Total candidate source files** | **110** | **70** | **40** |
+
+The 137 rows initially labelled `no-direct-source` had no direct filename/name candidate in the repository inventory; their exact applied SQL is now present in the recovered archive.
+
+This comparison confirms that filename/name matching alone was insufficient: **40 of the 110 candidate source files do not match the SQL actually recorded as applied**, even after whitespace normalization. Those files must not be substituted for the recovered historical payloads.
+
+The 70 normalized matches are evidence that the corresponding current source file represents the same SQL payload, subject to final checksum/semantic verification in the canonical reconstruction. They are not authorization to replay those files against an existing environment.
+
+
+## Ordered replay candidate staged — 2026-11-03
+
+- Created `supabase/replay-candidate/` with 247 SQL files reusing the exact Git blobs from the recovered Production ledger archive.
+- Candidate filenames use the actual 14-digit applied ledger versions; all 247 versions are unique and strictly increasing in filename/manifest order.
+- Extended the integrity validator to compare every replay-candidate copy with the Production-ledger MD5 and character count, check the 247-row manifest, and reject duplicate or out-of-order versions.
+- GitHub Actions integrity validation passed for head `2d6c187f7a882aa6761dae9aead1b034175699a8` (run 41727081617). BETHAG build also passed for the same head (run 41727081752).
+- The candidate remains outside `supabase/migrations/`; it is not deployed and has not been replayed.
+
+**Remaining gate:** a full replay against a disposable PostgreSQL 17 instance with the required Supabase platform bootstrap (including Auth roles/schema/functions) has not yet been run. Production and the existing QA branch are not acceptable replay targets. The candidate is therefore ordered and integrity-verified, but not yet proven executable end-to-end.

@@ -1,0 +1,109 @@
+{
+  "operation": "metadata-only equivalent of supabase migration repair --status reverted",
+  "target": "bethag-launch-qa",
+  "project_ref": "jhuyhlzzydcgghrzeexn",
+  "baseline_version_start": "20261017000001",
+  "baseline_versions": [
+    "20261017000001",
+    "20261017000002",
+    "20261017000003",
+    "20261017000004",
+    "20261017000005"
+  ],
+  "legacy_versions_to_revert": [
+    {
+      "version": "20260928021707",
+      "name": "initial_bethag_backend",
+      "source_path": "supabase/replay-candidate/20260928021707_initial_bethag_backend.sql"
+    },
+    {
+      "version": "20260928021808",
+      "name": "tighten_portal_rls",
+      "source_path": "supabase/replay-candidate/20260928021808_tighten_portal_rls.sql"
+    },
+    {
+      "version": "20260928021935",
+      "name": "sync_auth_profiles",
+      "source_path": "supabase/replay-candidate/20260928021935_sync_auth_profiles.sql"
+    },
+    {
+      "version": "20260928021944",
+      "name": "privatize_rls_functions",
+      "source_path": "supabase/replay-candidate/20260928021944_privatize_rls_functions.sql"
+    },
+    {
+      "version": "20260928022046",
+      "name": "add_legacy_ids_for_migration",
+      "source_path": "supabase/replay-candidate/20260928022046_add_legacy_ids_for_migration.sql"
+    },
+    {
+      "version": "20260928022126",
+      "name": "tighten_condominium_member_visibility",
+      "source_path": "supabase/replay-candidate/20260928022126_tighten_condominium_member_visibility.sql"
+    },
+    {
+      "version": "20260928022526",
+      "name": "add_condominium_member_legacy_unique_key",
+      "source_path": "supabase/replay-candidate/20260928022526_add_condominium_member_legacy_unique_key.sql"
+    },
+    {
+      "version": "20260928022821",
+      "name": "add_workspace_legacy_unique_constraints",
+      "source_path": "supabase/replay-candidate/20260928022821_add_workspace_legacy_unique_constraints.sql"
+    },
+    {
+      "version": "20260928024823",
+      "name": "bootstrap_first_workspace_admin",
+      "source_path": "supabase/replay-candidate/20260928024823_bootstrap_first_workspace_admin.sql"
+    },
+    {
+      "version": "20260928024931",
+      "name": "harden_first_admin_rpc",
+      "source_path": "supabase/replay-candidate/20260928024931_harden_first_admin_rpc.sql"
+    },
+    {
+      "version": "20260928040840",
+      "name": "allow_portal_residents_read_condominiums",
+      "source_path": "supabase/replay-candidate/20260928040840_allow_portal_residents_read_condominiums.sql"
+    },
+    {
+      "version": "20260928041428",
+      "name": "persist_collaborator_legacy_ids",
+      "source_path": "supabase/replay-candidate/20260928041428_persist_collaborator_legacy_ids.sql"
+    },
+    {
+      "version": "20260928042328",
+      "name": "enforce_collaborator_module_permissions",
+      "source_path": "supabase/replay-candidate/20260928042328_enforce_collaborator_module_permissions.sql"
+    },
+    {
+      "version": "20260928042333",
+      "name": "refine_collaborator_permission_scope",
+      "source_path": "supabase/replay-candidate/20260928042333_refine_collaborator_permission_scope.sql"
+    },
+    {
+      "version": "20260928043406",
+      "name": "harden_authenticated_request_policies",
+      "source_path": "supabase/replay-candidate/20260928043406_harden_authenticated_request_policies.sql"
+    },
+    {
+      "version": "20260928043415",
+      "name": "finish_authenticated_rls_hardening",
+      "source_path": "supabase/replay-candidate/20260928043415_finish_authenticated_rls_hardening.sql"
+    }
+  ],
+  "expected_applied_registry_count": 33,
+  "reason": "The five full schema baseline snapshots supersede these 16 pre-baseline historical migrations. Their exact SQL remains preserved in the recovered Production-ledger archive. The isolated QA replay proved the five baseline plus 28 forward-only migrations reconstruct the live QA table-column inventory and schema counts.",
+  "status": "completed",
+  "actual_reverted_at": "2026-11-04",
+  "actual_rows_deleted": 16,
+  "applied_registry_count_after_repair": 34,
+  "schema_or_application_data_changed": false,
+  "verification": "list_migrations returned exactly 33 applied entries, beginning at 20261017000001 and ending at 20261104122833; 47 public tables remain and RLS is enabled on all.",
+  "additional_forward_migration": {
+    "version": "20261104125614",
+    "name": "revoke_authenticated_execute_on_unused_private_workspace_staff",
+    "reason": "Removed the only extra authenticated EXECUTE grant that had no public invoker wrapper or policy/function caller; service_role retains EXECUTE."
+  },
+  "execution_method": "Removed only the 16 listed rows from supabase_migrations.schema_migrations through the connected database SQL interface, matching the documented CLI reverted semantics. No schema or application data statements were run."
+}
