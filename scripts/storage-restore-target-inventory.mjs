@@ -35,6 +35,77 @@ function validateManifestObjects(manifestObjects) {
   return expected;
 }
 
+function normalizeOptionalHeader(value, label) {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value !== "string") {
+    throw new Error("Restore object metadata contains an invalid " + label);
+  }
+  return value;
+}
+
+function normalizeExpires(value, label) {
+  if (value === null || value === undefined || value === "") return null;
+  const date = value instanceof Date ? value : new Date(value);
+  const timestamp = date.getTime();
+  if (!Number.isFinite(timestamp)) {
+    throw new Error("Restore object metadata contains an invalid " + label);
+  }
+  return timestamp;
+}
+
+function normalizeUserMetadata(value, label) {
+  if (value === null || value === undefined) return [];
+  if (typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Restore object metadata contains an invalid " + label);
+  }
+
+  const entries = Object.entries(value).map(([key, entryValue]) => {
+    if (!key.trim() || typeof entryValue !== "string") {
+      throw new Error("Restore object metadata contains an invalid " + label + " entry");
+    }
+    return [key.toLowerCase(), entryValue];
+  }).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0);
+
+  for (let index = 1; index < entries.length; index += 1) {
+    if (entries[index - 1][0] === entries[index][0]) {
+      throw new Error("Restore object metadata contains duplicate case-insensitive " + label + " keys");
+    }
+  }
+  return entries;
+}
+
+function assertRestoreObjectMetadataMatches(item, response, key) {
+  const fields = [
+    ["ContentType", item.content_type || "application/octet-stream", response?.ContentType],
+    ["CacheControl", item.cache_control || null, response?.CacheControl],
+    ["ContentDisposition", item.content_disposition || null, response?.ContentDisposition],
+    ["ContentEncoding", item.content_encoding || null, response?.ContentEncoding],
+    ["ContentLanguage", item.content_language || null, response?.ContentLanguage],
+  ];
+
+  for (const [field, expectedValue, actualValue] of fields) {
+    if (normalizeOptionalHeader(expectedValue, "manifest " + field) !==
+        normalizeOptionalHeader(actualValue, "target " + field)) {
+      throw new Error("Existing restore target object metadata does not match the selected snapshot (" +
+        field + "): " + JSON.stringify(key));
+    }
+  }
+
+  const expectedExpires = normalizeExpires(item.expires, "manifest Expires");
+  const actualExpires = normalizeExpires(response?.Expires, "target Expires");
+  if (expectedExpires !== actualExpires) {
+    throw new Error("Existing restore target object metadata does not match the selected snapshot (Expires): " +
+      JSON.stringify(key));
+  }
+
+  const expectedUserMetadata = normalizeUserMetadata(item.metadata, "manifest user metadata");
+  const actualUserMetadata = normalizeUserMetadata(response?.Metadata, "target user metadata");
+  if (JSON.stringify(expectedUserMetadata) !== JSON.stringify(actualUserMetadata)) {
+    throw new Error("Existing restore target object metadata does not match the selected snapshot (Metadata): " +
+      JSON.stringify(key));
+  }
+}
+
 export async function listRestoreTargetObjects(
   client,
   bucket,
@@ -138,6 +209,7 @@ export async function inspectExistingRestoreTarget({
       throw new Error("Existing restore target object does not match the selected snapshot: " +
         JSON.stringify(listed.Key));
     }
+    assertRestoreObjectMetadataMatches(item, response, listed.Key);
     existingKeys.add(listed.Key);
   }
 
@@ -191,6 +263,7 @@ export async function restoreMissingObjects({
       throw new Error("Restored target object failed read-after-write SHA-256/size verification: " +
         JSON.stringify(item.key));
     }
+    assertRestoreObjectMetadataMatches(item, response, item.key);
     written += 1;
     existingKeys.add(item.key);
   }
