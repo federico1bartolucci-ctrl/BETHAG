@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { assertStorageRestoreManifestObjectKeys } from "./storage-restore-manifest.mjs";
 
 const DEFAULT_MAX_KEYS = 1000;
 const MAX_LIST_PAGES = 10000;
@@ -20,15 +21,10 @@ function validateManifestObjects(manifestObjects) {
     throw new TypeError("Restore target verification requires a manifest object array");
   }
   const expected = new Map();
-  for (const item of manifestObjects) {
-    if (!item || typeof item.key !== "string" || item.key.length === 0 ||
-        item.key.startsWith("/") || item.key.endsWith("/") || item.key.includes("\\") ||
-        !/^[a-f0-9]{64}$/.test(item.sha256) ||
+  for (const item of assertStorageRestoreManifestObjectKeys(manifestObjects)) {
+    if (!/^[a-f0-9]{64}$/.test(item.sha256) ||
         !Number.isSafeInteger(item.size) || item.size < 0) {
       throw new Error("Restore manifest contains an invalid object entry");
-    }
-    if (expected.has(item.key)) {
-      throw new Error("Restore manifest contains duplicate source object keys");
     }
     expected.set(item.key, item);
   }
