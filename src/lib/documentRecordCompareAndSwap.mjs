@@ -11,8 +11,16 @@ function sameStoragePath(currentRow, expectedPath) {
   return currentPath === (expectedPath ?? null);
 }
 
-// Compare-and-swap the document's Storage pointer against the version observed by the editor.
-// Legacy rows without file_path use the JSONB storagePath value as the concurrency token.
+function filterNullableColumn(query, column, value) {
+  return value === null || value === undefined
+    ? query.is(column, null)
+    : query.eq(column, value);
+}
+
+// Compare-and-swap the complete mutable document snapshot observed by the editor.
+// The Storage pointer remains the user-visible version token, while the SQL UPDATE
+// also compares metadata and JSONB so concurrent metadata-only edits cannot overwrite
+// one another when the file_path itself has not changed.
 export async function updateDocumentRecordIfStorageVersionMatches(
   client,
   row,
@@ -27,7 +35,7 @@ export async function updateDocumentRecordIfStorageVersionMatches(
 
   const { data: current, error: readError } = await client
     .from("documents")
-    .select("id,workspace_id,legacy_id,condominium_id,file_path,data")
+    .select("id,workspace_id,legacy_id,condominium_id,title,category,status,file_path,data")
     .eq("workspace_id", row.workspace_id)
     .eq("legacy_id", row.legacy_id)
     .eq("condominium_id", expectedCondominiumId)
@@ -59,6 +67,20 @@ export async function updateDocumentRecordIfStorageVersionMatches(
     } else {
       update = update.filter("data->>storagePath", "eq", legacyStoragePath);
     }
+  }
+
+  // A Storage-path-only compare-and-swap is insufficient for metadata-only edits:
+  // two sessions can keep the same file_path and both update the row successfully.
+  update = filterNullableColumn(update, "title", current.title);
+  update = filterNullableColumn(update, "category", current.category);
+  update = filterNullableColumn(update, "status", current.status);
+
+  if (current.data === null || current.data === undefined) {
+    update = update.is("data", null);
+  } else {
+    // PostgREST's raw filter accepts a JSON literal; JSONB equality compares the
+    // complete document payload independent of object-key ordering.
+    update = update.filter("data", "eq", JSON.stringify(current.data));
   }
 
   const { data, error } = await update
