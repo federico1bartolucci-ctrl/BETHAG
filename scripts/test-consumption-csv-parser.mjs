@@ -111,6 +111,25 @@ for (const value of malformedMixedLocaleAmounts) {
   assert.equal(rejected.rows.length, 0, "malformed numeric grouping must not produce partial import rows");
 }
 
+const malformedRepeatedSeparatorAmounts = [
+  "1,23,456",
+  "12,34,567",
+  "1.23.456",
+  "12.34.567",
+  "1.234.56",
+  "1,234,56",
+  "1234.567.890",
+  "1,234,,567",
+];
+for (const value of malformedRepeatedSeparatorAmounts) {
+  assert.ok(Number.isNaN(parseBethagAmount(value)), "malformed repeated thousands grouping must be rejected: " + value);
+}
+assert.equal(parseBethagAmount("1,234,567"), 1234567, "valid repeated comma grouping must remain supported");
+assert.equal(parseBethagAmount("1.234.567"), 1234567, "valid repeated dot grouping must remain supported");
+assert.equal(parseBethagAmount("1,234,567,890"), 1234567890, "valid long repeated comma grouping must remain supported");
+assert.equal(parseBethagAmount("1.234.567.890"), 1234567890, "valid long repeated dot grouping must remain supported");
+assert.equal(parseBethagAmount("1,23,456", 0), 0, "malformed repeated grouping must preserve the caller fallback");
+
 const commaCsv = [
   "Unita,Esercizio,Lettura precedente,Lettura attuale,Consumo,Note",
   "A1,2026,100,\"110,5\",\"10,5\",\"lettura, principale\"",
