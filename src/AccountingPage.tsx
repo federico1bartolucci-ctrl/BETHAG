@@ -9,7 +9,7 @@ import MemberTransferPanel from "./MemberTransferPanel";
 import { localISODate } from "./lib/local-date";
 import { loadAccountingCondominiumMembers } from "./lib/accountingCondominiumMembers.mjs";
 import { loadAccountingUnitMembers } from "./lib/accountingMemberLookup.mjs";
-import { calculateLedgerExpensePaid } from "./lib/accountingExpensePaidSummary.js";
+import { calculateLedgerExpensePaid, getReportableAccountingInstallments } from "./lib/accountingExpensePaidSummary.js";
 import { calculateRendicontoUnitBalances } from "./lib/accountingRendicontoUnitBalance.js";
 import { millesimalTableScopeMatchesUnit } from "./lib/millesimalTableScope.mjs";
 import { persistFiscalYearRecord } from "./lib/fiscalYearSave.mjs";
@@ -384,9 +384,11 @@ function AccountingPage({
   );
 
   const rendicontoInstallments = useMemo(
-    () => rendicontoYearId === "all"
-      ? scopedInstallments
-      : scopedInstallments.filter((i) => i.fiscal_year_id === rendicontoYearId),
+    () => getReportableAccountingInstallments(
+      rendicontoYearId === "all"
+        ? scopedInstallments
+        : scopedInstallments.filter((i) => i.fiscal_year_id === rendicontoYearId)
+    ),
     [scopedInstallments, rendicontoYearId]
   );
 
