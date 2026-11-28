@@ -77,6 +77,26 @@ export default function RegisterPage({workspaceId,condominiums,isAdministrator=f
   }
  }
  useEffect(()=>{
+  setShowDocuments(false);
+  setDocumentWork(null);
+  setLinkedDocumentIds([]);
+  setShowExpense(false);
+  setExpenseWork(null);
+  setShowProgress(false);
+  setProgressWork(null);
+  setShowPayment(false);
+  setPaymentProgress(null);
+  setPaymentWork(null);
+  setShowHistory(false);
+  setHistoryWork(null);
+  setHistoryEvents([]);
+  setShowItemForm(false);
+  setShowSupplierForm(false);
+  setShowWorkForm(false);
+  setEditing(null);
+  setEditingItemScope(null);
+  setEditingSupplier(null);
+  setEditingWork(null);
   void load();
   return ()=>{loadRequestRef.current+=1;};
  },[workspaceId,selected]);
