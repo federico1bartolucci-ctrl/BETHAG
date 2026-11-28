@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { uploadFilesWithRollback } from "./documentStorageUpload.js";
 import { parseInvoiceDate } from "./invoiceDate.mjs";
 import { resolveActiveWorkspaceId } from "./preferredWorkspaceResolution.mjs";
 import { loadExistingCondominiumUnits, requireCondominiumUnitRenameResult } from "./condominiumUnitGeneration.mjs";
@@ -2171,26 +2172,11 @@ export async function storeWorkspaceDocuments(
   if (!workspaceId) throw new Error("Workspace non disponibile.");
   if (!files.length) return [];
 
-  const stored: any[] = [];
-  for (const file of files) {
+  const pathPrefix = condominiumId ? workspaceId + "/" + condominiumId : workspaceId;
+  return uploadFilesWithRollback(supabase.storage, "bethag-documents", files, (file) => {
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const pathPrefix = condominiumId ? workspaceId + "/" + condominiumId : workspaceId;
-    const path = pathPrefix + "/" + Date.now() + "-" + Math.random().toString(36).slice(2, 10) + "-" + safeName;
-    const { error } = await supabase.storage.from("bethag-documents").upload(path, file, {
-      upsert: false,
-      contentType: file.type || "application/octet-stream",
-      cacheControl: "3600",
-    });
-    if (error) throw new Error(`Impossibile memorizzare "${file.name}": ${error.message}`);
-    stored.push({
-      name: file.name,
-      path,
-      type: file.type || "application/octet-stream",
-      size: file.size,
-      lastModified: file.lastModified,
-    });
-  }
-  return stored;
+    return pathPrefix + "/" + Date.now() + "-" + Math.random().toString(36).slice(2, 10) + "-" + safeName;
+  });
 }
 
 export async function deleteWorkspaceStoredFile(path: string): Promise<void> {
@@ -2208,30 +2194,11 @@ export async function storeCondominiumDocuments(
   if (!workspaceId) throw new Error("Workspace non disponibile.");
   if (!files.length) return [];
 
-  const stored: any[] = [];
-  for (const file of files) {
+  const pathPrefix = workspaceId;
+  return uploadFilesWithRollback(supabase.storage, "bethag-documents", files, (file) => {
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const path = workspaceId + "/" + Date.now() + "-" + Math.random().toString(36).slice(2, 10) + "-" + safeName;
-    const { error } = await supabase.storage
-      .from("bethag-documents")
-      .upload(path, file, {
-        upsert: false,
-        contentType: file.type || "application/octet-stream",
-        cacheControl: "3600",
-      });
-
-    if (error) throw new Error(`Impossibile memorizzare "${file.name}": ${error.message}`);
-
-    stored.push({
-      name: file.name,
-      path,
-      type: file.type || "application/octet-stream",
-      size: file.size,
-      lastModified: file.lastModified,
-    });
-  }
-
-  return stored;
+    return pathPrefix + "/" + Date.now() + "-" + Math.random().toString(36).slice(2, 10) + "-" + safeName;
+  });
 }
 
 export async function analyzeWorkspaceStoredDocumentsWithAI(
