@@ -1,6 +1,49 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { planWorkDocumentLinkChanges, reconcileWorkDocumentLinks } from "../src/lib/workDocumentLinks.mjs";
+import { mapWorkDocumentLinkIds, planWorkDocumentLinkChanges, reconcileWorkDocumentLinks } from "../src/lib/workDocumentLinks.mjs";
+
+assert.deepEqual(mapWorkDocumentLinkIds([]), [], "a legitimate empty SELECT remains valid");
+assert.deepEqual(
+  mapWorkDocumentLinkIds([{ document_id: 1 }, { document_id: "2" }, { document_id: 2 }]),
+  [1, 2],
+  "persisted link IDs must be normalized and deduplicated",
+);
+for (const malformed of [null, undefined, {}, "not-an-array"]) {
+  assert.throws(
+    () => mapWorkDocumentLinkIds(malformed),
+    /Risposta dei collegamenti documentali non valida/,
+    "a malformed successful SELECT must not be interpreted as an empty link set",
+  );
+}
+
+// Reproduce the former false-success path: null was converted to [] and an
+// empty desired selection therefore closed the modal without reconciling rows.
+{
+  const response = { data: null, error: null };
+  const legacyCurrentIds = (response.data ?? []).map((row) => row.document_id);
+  assert.deepEqual(legacyCurrentIds, []);
+  assert.deepEqual(
+    planWorkDocumentLinkChanges(legacyCurrentIds, []),
+    { toInsert: [], toDelete: [] },
+    "the old null fallback falsely treated an unreadable link set as already empty",
+  );
+
+  const events = [];
+  await assert.rejects(
+    reconcileWorkDocumentLinks({
+      loadCurrentIds: async () => {
+        events.push("load");
+        if (response.error) throw response.error;
+        return mapWorkDocumentLinkIds(response.data);
+      },
+      desiredIds: [],
+      insertLinks: async () => { events.push("insert"); },
+      deleteLinks: async () => { events.push("delete"); },
+    }),
+    /Risposta dei collegamenti documentali non valida/,
+  );
+  assert.deepEqual(events, ["load"], "malformed reads must stop before insert/delete");
+}
 
 assert.deepEqual(
   planWorkDocumentLinkChanges([1, 2, 2], [2, 3, 3]),
@@ -96,12 +139,22 @@ assert.throws(
 }
 
 const source = await readFile(new URL("../src/RegisterPage.tsx", import.meta.url), "utf8");
+const openStart = source.indexOf("async function openWorkDocuments(");
+const saveStart = source.indexOf("async function saveWorkDocuments()", openStart);
+assert.ok(openStart >= 0 && saveStart > openStart, "openWorkDocuments must exist before saveWorkDocuments");
+const openHandler = source.slice(openStart, saveStart);
+assert.match(openHandler, /mapWorkDocumentLinkIds\\(data\\)/, "opening the modal must validate the successful SELECT response");
+assert.ok(openHandler.indexOf("mapWorkDocumentLinkIds(data)") < openHandler.indexOf("setShowDocuments(true)"), "the modal must not open before linked IDs are validated");
+assert.doesNotMatch(openHandler, /data\\?\\?\\[\\]/, "opening the modal must not coerce null data to an empty link set");
+
 const start = source.indexOf("async function saveWorkDocuments()");
 const end = source.indexOf("async function registerProgressPayment", start);
 assert.ok(start >= 0 && end > start, "saveWorkDocuments must exist");
 const fn = source.slice(start, end);
 assert.match(fn, /reconcileWorkDocumentLinks\(/, "the UI must use the tested reconciliation helper");
 assert.match(fn, /loadCurrentIds:async\(\)/, "current link IDs must be re-read before every save/retry");
+assert.match(fn, /return mapWorkDocumentLinkIds\\(data\\)/, "save-time reads must reject malformed successful responses");
+assert.doesNotMatch(fn, /data\\?\\?\\[\\]/, "save-time reads must not coerce null data to an empty link set");
 assert.match(fn, /insertLinks:async\(ids\)/, "new links must be inserted before obsolete links are removed");
 assert.match(fn, /deleteLinks:async\(ids\)/, "only obsolete link IDs may be deleted");
 assert.match(fn, /\.eq\("workspace_id",workspaceId\)[\s\S]*\.eq\("condominium_id",dbId\)[\s\S]*\.eq\("work_id",documentWork\.id\)/, "all link reads and writes must remain workspace/condominium/work scoped");
@@ -111,4 +164,4 @@ assert.ok(!fn.includes('.delete().eq("work_id",documentWork.id).eq("workspace_id
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
 assert.ok(packageJson.scripts.test.includes("test-work-document-delete-error.mjs"), "the regression must remain in npm test");
 
-console.log("PASS work-document link reconciliation preserves existing links on partial failures and retries safely");
+console.log("PASS work-document link reconciliation rejects malformed successful reads and preserves existing links on partial failures");
