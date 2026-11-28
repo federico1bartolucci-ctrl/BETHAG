@@ -2,19 +2,27 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { loadWorkspacePaginatedRows } from "../src/lib/workspacePagination.mjs";
 
-function sortRows(rows, column) {
-  return rows.sort((a, b) => {
-    if (a[column] === null && b[column] !== null) return 1;
-    if (a[column] !== null && b[column] === null) return -1;
-    if (a[column] !== null && b[column] !== null) {
-      const compare = String(a[column]).localeCompare(String(b[column]));
-      if (compare) return compare;
-    }
-    return String(a.id).localeCompare(String(b.id));
-  });
+function compareValues(left, right) {
+  if (left === null || left === undefined) return right === null || right === undefined ? 0 : 1;
+  if (right === null || right === undefined) return -1;
+  if (typeof left === "number" && typeof right === "number") return left - right;
+  const a = String(left);
+  const b = String(right);
+  return a < b ? -1 : a > b ? 1 : 0;
 }
 
-function makeClient(initialRows, { insertBeforePage = null, inserts = [], deleteBeforePage = null, deleteIds = [], failPage = null } = {}) {
+function compareIds(left, right) {
+  if (typeof left === "number" && typeof right === "number") return left - right;
+  const a = String(left);
+  const b = String(right);
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+function sortRows(rows, column) {
+  return rows.sort((a, b) => compareValues(a[column], b[column]) || compareIds(a.id, b.id));
+}
+
+function makeClient(initialRows, { insertBeforePage = null, inserts = [], deleteBeforePage = null, deleteIds = [], updateBeforePage = null, updates = [], failPage = null } = {}) {
   const records = initialRows.slice();
   const requests = [];
   let pageNumber = 0;
@@ -36,6 +44,13 @@ function makeClient(initialRows, { insertBeforePage = null, inserts = [], delete
             for (const id of deleteIds) {
               const index = records.findIndex((row) => row.id === id);
               if (index >= 0) records.splice(index, 1);
+            }
+          }
+          if (pageNumber === updateBeforePage) {
+            for (const update of updates) {
+              const { id, ...changes } = update;
+              const row = records.find((item) => item.id === id);
+              if (row) Object.assign(row, changes);
             }
           }
           if (pageNumber === failPage) return Promise.resolve({ data: null, error: new Error("workspace page failure") });
@@ -62,6 +77,8 @@ function makeClient(initialRows, { insertBeforePage = null, inserts = [], delete
             filtered = filtered.filter((row) => row[orderColumn] === null || String(row[orderColumn]) > greaterThanValue || (String(row[orderColumn]) === equalValue && String(row.id) > greaterThanId));
           } else if (state.nullCursor) {
             filtered = filtered.filter((row) => row[orderColumn] === null && String(row.id) > String(state.idGt));
+          } else if (state.idGt !== null) {
+            filtered = filtered.filter((row) => compareIds(row.id, state.idGt) > 0);
           }
           const sorted = sortRows(filtered, orderColumn);
           return Promise.resolve({ data: sorted.slice(from, to + 1), error: null });
@@ -86,6 +103,26 @@ async function loadLegacyOffsetRows(client, workspaceId, pageSize = 1000) {
   }
 }
 
+async function loadLegacyOrderKeysetRows(client, workspaceId, orderBy, pageSize = 1000) {
+  const rows = [];
+  let cursor = null;
+  for (;;) {
+    let query = client.from("condominium_ledger_entries").select("*").eq("workspace_id", workspaceId)
+      .order(orderBy, { ascending: true, nullsFirst: false }).order("id", { ascending: true });
+    if (cursor) {
+      if (cursor.value === null) query = query.is(orderBy, null).gt("id", cursor.id);
+      else query = query.or(orderBy + ".gt." + cursor.value + ",and(" + orderBy + ".eq." + cursor.value + ",id.gt." + cursor.id + ")," + orderBy + ".is.null");
+    }
+    const { data, error } = await query.range(0, pageSize - 1);
+    if (error) throw error;
+    const page = data ?? [];
+    rows.push(...page);
+    if (page.length < pageSize) return rows;
+    const last = page[page.length - 1];
+    cursor = { value: last[orderBy] ?? null, id: String(last.id) };
+  }
+}
+
 const originals = Array.from({ length: 1001 }, (_, i) => ({
   id: `row-${String(i).padStart(4, "0")}`,
   workspace_id: "workspace-1",
@@ -99,7 +136,7 @@ const staticResult = await loadWorkspacePaginatedRows(staticClient.client, "docu
 assert.equal(staticResult.data.length, 1001);
 assert.deepEqual(staticClient.requests.map(({ from, to }) => [from, to]), [[0, 999], [0, 999]]);
 assert.ok(staticClient.requests.every((request) => request.workspaceId === "workspace-1"));
-assert.deepEqual(staticClient.requests[0].orders, [["created_at", { ascending: true, nullsFirst: false }], ["id", { ascending: true }]]);
+assert.deepEqual(staticClient.requests[0].orders, [["id", { ascending: true }]], "pagination must use the immutable primary key as its cursor");
 assert.equal(staticClient.requests[0].table, "documents");
 assert.equal(new Set(staticResult.data.map((row) => row.id)).size, 1001);
 
@@ -129,7 +166,10 @@ const legacyInsertIds = legacyInsertRows.map((row) => row.id);
 assert.ok(legacyInsertIds.length > new Set(legacyInsertIds).size, "legacy offset paging must reproduce duplicates after concurrent inserts");
 const keysetInsert = makeClient(originals, { insertBeforePage: 2, inserts });
 const keysetInsertRows = await loadWorkspacePaginatedRows(keysetInsert.client, "documents", "workspace-1");
-assert.deepEqual(keysetInsertRows.data.map((row) => row.id), originals.map((row) => row.id), "keyset paging must preserve the original rows exactly once when inserts shift the prefix");
+const insertedPageIds = keysetInsertRows.data.map((row) => row.id);
+assert.ok(originals.every((row) => insertedPageIds.filter((id) => id === row.id).length === 1),
+  "keyset paging must preserve every original row exactly once when inserts shift the prefix");
+assert.equal(new Set(insertedPageIds).size, insertedPageIds.length, "keyset paging must not duplicate IDs after concurrent inserts");
 
 // Reproduce legacy offset drift caused by deletes before page two.
 const deleteIds = ["row-0000", "row-0001"];
@@ -139,6 +179,72 @@ assert.ok(!legacyDeleteRows.some((row) => row.id === "row-1000"), "legacy offset
 const keysetDelete = makeClient(originals, { deleteBeforePage: 2, deleteIds });
 const keysetDeleteRows = await loadWorkspacePaginatedRows(keysetDelete.client, "documents", "workspace-1");
 assert.deepEqual(keysetDeleteRows.data.map((row) => row.id), originals.map((row) => row.id), "keyset paging must preserve the rows already fetched and reach the remaining rows after deletes");
+
+// Reproduce a second keyset defect: editable business dates can move rows
+// across the cursor between pages, causing one duplicate and one omission.
+function createMutableLedgerRows() {
+  return Array.from({ length: 1001 }, (_, i) => ({
+    id: "row-" + String(i).padStart(4, "0"),
+    workspace_id: "workspace-1",
+    created_at: new Date(Date.UTC(2026, 0, 1, 0, 0, i)).toISOString(),
+    entry_date: i === 1000 ? "2026-01-02" : "2026-01-01",
+  }));
+}
+const mutableDateUpdates = [
+  { id: "row-0000", entry_date: "2026-01-03" },
+  { id: "row-1000", entry_date: "2025-12-31" },
+];
+const legacyMutableClient = makeClient(createMutableLedgerRows(), {
+  updateBeforePage: 2,
+  updates: mutableDateUpdates,
+});
+const legacyMutableRows = await loadLegacyOrderKeysetRows(
+  legacyMutableClient.client,
+  "workspace-1",
+  "entry_date",
+);
+const legacyMutableIds = legacyMutableRows.map((row) => row.id);
+assert.equal(legacyMutableIds.filter((id) => id === "row-0000").length, 2,
+  "the old business-date cursor must reproduce a duplicate when a read row moves after the cursor");
+assert.ok(!legacyMutableIds.includes("row-1000"),
+  "the old business-date cursor must reproduce an omission when an unread row moves before the cursor");
+
+const correctedMutableClient = makeClient(createMutableLedgerRows(), {
+  updateBeforePage: 2,
+  updates: mutableDateUpdates,
+});
+const correctedMutableRows = await loadWorkspacePaginatedRows(
+  correctedMutableClient.client,
+  "condominium_ledger_entries",
+  "workspace-1",
+  { orderBy: "entry_date" },
+);
+const correctedMutableIds = correctedMutableRows.data.map((row) => row.id);
+assert.equal(correctedMutableIds.length, 1001);
+assert.equal(new Set(correctedMutableIds).size, 1001,
+  "immutable-ID pagination must return every ledger row exactly once after concurrent date edits");
+assert.ok(createMutableLedgerRows().every((row) => correctedMutableIds.includes(row.id)));
+assert.equal(correctedMutableRows.data[0].id, "row-1000",
+  "results must still be sorted by the requested business date after collection");
+assert.equal(correctedMutableRows.data.at(-1).id, "row-0000",
+  "the requested business-date order must be preserved after concurrent edits");
+
+// Internal cursor/sort columns added to a narrow projection must not leak into its result shape.
+const projectionClient = makeClient([
+  { id: "projection-1", workspace_id: "workspace-1", entry_date: "2026-01-01", name: "Ledger row" },
+]);
+const projectionResult = await loadWorkspacePaginatedRows(
+  projectionClient.client,
+  "condominium_ledger_entries",
+  "workspace-1",
+  { select: "id,name", orderBy: "entry_date", pageSize: 10 },
+);
+assert.ok(projectionClient.requests[0].select.includes("entry_date"),
+  "the requested sort column must be selected for the final in-memory ordering");
+assert.equal(projectionResult.data[0].id, "projection-1");
+assert.equal(projectionResult.data[0].name, "Ledger row");
+assert.equal("entry_date" in projectionResult.data[0], false,
+  "internal sort columns must be removed when they were not part of the requested projection");
 
 // Input validation and fail-closed page handling.
 await assert.rejects(loadWorkspacePaginatedRows(staticClient.client, "documents", "", {}), /Workspace non disponibile/);
