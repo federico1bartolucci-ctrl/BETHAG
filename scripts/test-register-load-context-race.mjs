@@ -41,7 +41,7 @@ assert.match(source, /if\(isCurrentRegisterLoad\(requestId,loadRequestRef\.curre
 assert.match(source, /if\(!isCurrentRegisterLoad\(requestId,loadRequestRef\.current\)\)return;/, "stale list responses must be discarded before state writes");
 assert.match(source, /if\(isCurrentRegisterLoad\(requestId,loadRequestRef\.current\)\)setError/, "stale load failures must not overwrite current errors");
 assert.match(source, /if\(isCurrentRegisterLoad\(requestId,loadRequestRef\.current\)\)setLoading\(false\)/, "stale loads must not clear the current loading state");
-assert.match(source, /return\(\)=>\{loadRequestRef\.current\+=1;\}/, "effect cleanup must invalidate outstanding requests");
+assert.match(source, /return\s*\(\)\s*=>\{loadRequestRef\.current\+=1;\}/, "effect cleanup must invalidate outstanding requests");
 assert.match(source, /const contextIsLoaded=loadedContextKey===currentContextKey/, "data must be keyed to the current workspace and condominium");
 assert.match(source, /if\(supabase&&!contextIsLoaded\)/, "previous-context data must be hidden while the new context loads");
 assert.match(source, /setShowDocuments\(false\)[\s\S]*setDocumentWork\(null\)[\s\S]*setShowPayment\(false\)[\s\S]*setShowHistory\(false\)/, "context changes must close modals and discard selections from the previous condominium/workspace");
