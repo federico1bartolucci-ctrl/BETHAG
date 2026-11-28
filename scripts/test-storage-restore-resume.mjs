@@ -31,14 +31,17 @@ function createTargetClient({
   pageSize = 1000,
   failPutAt = null,
   corruptPutKey = null,
+  corruptPutMetadataKey = null,
 } = {}) {
   const objects = new Map(initial.map(([key, bytes]) => [key, Buffer.from(bytes)]));
+  const objectMetadata = new Map(initial.map(([key, bytes, metadata = {}]) => [key, { ...metadata }]));
   const putKeys = [];
   const listInputs = [];
   let putCount = 0;
 
   return {
     objects,
+    objectMetadata,
     putKeys,
     listInputs,
     async send(command) {
@@ -60,7 +63,10 @@ function createTargetClient({
       if (command instanceof GetObjectCommand) {
         if (!objects.has(input.Key)) throw new Error("NoSuchKey: " + input.Key);
         const bytes = Buffer.from(objects.get(input.Key));
-        return { Body: { transformToByteArray: async () => bytes } };
+        return {
+          ...(objectMetadata.get(input.Key) || {}),
+          Body: { transformToByteArray: async () => bytes },
+        };
       }
       if (command instanceof PutObjectCommand) {
         putCount += 1;
@@ -74,6 +80,19 @@ function createTargetClient({
           if (bytes.length) bytes[0] ^= 0xff;
         }
         objects.set(input.Key, bytes);
+        const storedMetadata = {
+          ContentType: input.ContentType,
+          ...(input.CacheControl ? { CacheControl: input.CacheControl } : {}),
+          ...(input.ContentDisposition ? { ContentDisposition: input.ContentDisposition } : {}),
+          ...(input.ContentEncoding ? { ContentEncoding: input.ContentEncoding } : {}),
+          ...(input.ContentLanguage ? { ContentLanguage: input.ContentLanguage } : {}),
+          ...(input.Expires ? { Expires: input.Expires } : {}),
+          Metadata: Object.fromEntries(
+            Object.entries(input.Metadata || {}).map(([key, value]) => [key.toLowerCase(), value]),
+          ),
+        };
+        if (corruptPutMetadataKey === input.Key) storedMetadata.ContentType = "application/pdf";
+        objectMetadata.set(input.Key, storedMetadata);
         return {};
       }
       throw new Error("Unexpected fake S3 command");
@@ -91,6 +110,11 @@ const manifestObjects = payloads.map(([key, bytes]) => ({
   size: bytes.length,
   sha256: digest(bytes),
   content_type: "text/plain",
+  cache_control: "public, max-age=60",
+  content_disposition: "inline",
+  content_language: "it",
+  expires: "2026-12-31T23:59:59.000Z",
+  metadata: { "x-document-kind": "test" },
 }));
 const verifiedObjects = payloads.map(([key, bytes], index) => ({
   item: manifestObjects[index],
@@ -202,6 +226,89 @@ const retryState = await inspectExistingRestoreTarget({
 });
 assert.deepEqual([...retryState.existingKeys], ["documents/a.txt"]);
 
+// Reproduce the resume gap: the existing bytes match, so the old byte-only
+// preflight accepted this object even though its browser-visible Content-Type
+// differed from the selected manifest. A resumed restore must reject it.
+const wrongContentTypeTarget = createTargetClient({
+  initial: [[
+    "documents/a.txt",
+    payloads[0][1],
+    {
+      ContentType: "application/pdf",
+      CacheControl: "public, max-age=60",
+      ContentDisposition: "inline",
+      ContentLanguage: "it",
+      Expires: new Date("2026-12-31T23:59:59.000Z"),
+      Metadata: { "x-document-kind": "test" },
+    },
+  ]],
+});
+assert.equal(digest(wrongContentTypeTarget.objects.get("documents/a.txt")), manifestObjects[0].sha256,
+  "the reproduced target has matching bytes and would pass the old byte-only check");
+await assert.rejects(
+  () => inspectExistingRestoreTarget({
+    client: wrongContentTypeTarget,
+    bucket: "recovery-bucket",
+    ListObjectsV2Command,
+    GetObjectCommand,
+    manifestObjects,
+    readBodyBytes,
+  }),
+  /metadata does not match the selected snapshot \(ContentType\)/,
+);
+assert.equal(wrongContentTypeTarget.putKeys.length, 0, "metadata mismatch must fail before any overwrite");
+
+const wrongUserMetadataTarget = createTargetClient({
+  initial: [[
+    "documents/a.txt",
+    payloads[0][1],
+    {
+      ContentType: "text/plain",
+      CacheControl: "public, max-age=60",
+      ContentDisposition: "inline",
+      ContentLanguage: "it",
+      Expires: new Date("2026-12-31T23:59:59.000Z"),
+      Metadata: { "x-document-kind": "other" },
+    },
+  ]],
+});
+await assert.rejects(
+  () => inspectExistingRestoreTarget({
+    client: wrongUserMetadataTarget,
+    bucket: "recovery-bucket",
+    ListObjectsV2Command,
+    GetObjectCommand,
+    manifestObjects,
+    readBodyBytes,
+  }),
+  /metadata does not match the selected snapshot \(Metadata\)/,
+);
+
+const caseInsensitiveMetadataTarget = createTargetClient({
+  initial: [[
+    "documents/a.txt",
+    payloads[0][1],
+    {
+      ContentType: "text/plain",
+      CacheControl: "public, max-age=60",
+      ContentDisposition: "inline",
+      ContentLanguage: "it",
+      Expires: new Date("2026-12-31T23:59:59.000Z"),
+      Metadata: { "X-Document-Kind": "test" },
+    },
+  ]],
+});
+const caseInsensitiveMetadataState = await inspectExistingRestoreTarget({
+  client: caseInsensitiveMetadataTarget,
+  bucket: "recovery-bucket",
+  ListObjectsV2Command,
+  GetObjectCommand,
+  manifestObjects,
+  readBodyBytes,
+});
+assert.deepEqual([...caseInsensitiveMetadataState.existingKeys], ["documents/a.txt"],
+  "S3 user-metadata key casing must be normalized before comparison");
+
 const retryStats = await restoreMissingObjects({
   client: target,
   bucket: "recovery-bucket",
@@ -275,6 +382,31 @@ await assert.rejects(
   /read-after-write SHA-256\/size verification/,
 );
 
+// Read-after-write must also verify metadata, not just bytes.
+const corruptMetadataTarget = createTargetClient({ corruptPutMetadataKey: "documents/a.txt" });
+const corruptMetadataState = await inspectExistingRestoreTarget({
+  client: corruptMetadataTarget,
+  bucket: "recovery-bucket",
+  ListObjectsV2Command,
+  GetObjectCommand,
+  manifestObjects,
+  readBodyBytes,
+});
+await assert.rejects(
+  () => restoreMissingObjects({
+    client: corruptMetadataTarget,
+    bucket: "recovery-bucket",
+    verifiedObjects,
+    existingKeys: corruptMetadataState.existingKeys,
+    PutObjectCommand,
+    GetObjectCommand,
+    readBodyBytes,
+  }),
+  /metadata does not match the selected snapshot \(ContentType\)/,
+  "a successful PUT with correct bytes but wrong metadata must not be certified",
+);
+
 console.log("PASS: restore target pagination consumes all pages and fails closed on malformed/repeated tokens.");
-console.log("PASS: interrupted R2 restore is reproducible and resumes only verified objects from the same manifest.");
+console.log("PASS: interrupted R2 restore resumes only when existing bytes and object metadata match the manifest.");
+console.log("PASS: object metadata casing, mismatches and read-after-write metadata are verified.");
 console.log("PASS: folder markers, unexpected keys, mismatched bytes and corrupt read-after-write remain blocked.");
