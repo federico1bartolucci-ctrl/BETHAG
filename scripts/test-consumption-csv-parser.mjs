@@ -130,6 +130,34 @@ assert.equal(parseBethagAmount("1,234,567,890"), 1234567890, "valid long repeate
 assert.equal(parseBethagAmount("1.234.567.890"), 1234567890, "valid long repeated dot grouping must remain supported");
 assert.equal(parseBethagAmount("1,23,456", 0), 0, "malformed repeated grouping must preserve the caller fallback");
 
+const malformedEmbeddedTextAmounts = [
+  "abc 123",
+  "12abc34",
+  "1e3",
+  "1€2",
+  "1,234.50USD",
+  "1,234.50 USD",
+  "1'234",
+];
+for (const value of malformedEmbeddedTextAmounts) {
+  assert.ok(Number.isNaN(parseBethagAmount(value)), "embedded text or unsupported characters must be rejected: " + value);
+}
+assert.equal(parseBethagAmount("12abc34", 0), 0, "malformed OCR text must preserve the caller fallback");
+assert.equal(parseBethagAmount("€ 1.234,56"), 1234.56, "leading supported currency symbol remains valid");
+assert.equal(parseBethagAmount("1.234,56 €"), 1234.56, "trailing supported currency symbol remains valid");
+assert.equal(parseBethagAmount("EUR 1.234,56"), 1234.56, "leading EUR marker remains valid");
+assert.equal(parseBethagAmount("1.234,56 EUR"), 1234.56, "trailing EUR marker remains valid");
+assert.ok(Number.isNaN(parseBethagAmount("€ 1.234,56 EUR")), "duplicated leading and trailing currency markers must be rejected");
+
+const malformedTextCsv = prepareMixedLocale(["A1", "2026", "1,234.50USD", "1,244.50", "10.00", "2,500.75"]);
+assert.ok(malformedTextCsv.errors.length > 0, "CSV import must reject amount fields containing embedded currency text");
+assert.equal(malformedTextCsv.rows.length, 0, "malformed amount text must not produce partial import rows");
+
+const supportedCurrencyCsv = prepareMixedLocale(["A1", "2026", "€ 1.234,50", "€ 1.244,50", "10,00", "€ 2.500,75"]);
+assert.equal(supportedCurrencyCsv.errors.length, 0, "supported currency decorations must remain importable");
+assert.equal(supportedCurrencyCsv.rows[0].previous_reading, 1234.5);
+assert.equal(supportedCurrencyCsv.rows[0].charge_amount, 2500.75);
+
 const commaCsv = [
   "Unita,Esercizio,Lettura precedente,Lettura attuale,Consumo,Note",
   "A1,2026,100,\"110,5\",\"10,5\",\"lettura, principale\"",
@@ -202,6 +230,6 @@ assert.ok(accountingSource.includes("!/^\\d{4}-\\d{2}-\\d{2}$/.test(yearForm.end
 assert.ok(accountingSource.includes("!/^\\d{4}-\\d{2}-\\d{2}$/.test(d) || (i > 0"), "allocation due-date validation must use a real digit matcher");
 
 const packageJson = JSON.parse(await readFile("package.json", "utf8"));
-assert.ok(packageJson.scripts.test.includes("test-consumption-csv-parser.mjs"), "runtime regression must be wired into npm test");
+assert.equal((packageJson.scripts.test.match(/node scripts\/test-consumption-csv-parser\.mjs/g) || []).length, 1, "runtime regression must be registered exactly once in npm test");
 
 console.log("PASS consumption CSV delimiter, quoted-field, numeric, date, scope and all-or-nothing runtime regression.");
