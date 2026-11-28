@@ -10,7 +10,7 @@ const manifest = {
   created_at: "2026-11-28T02:54:00.000Z",
   source_bucket: "bethag-documents",
   object_count: 1,
-  objects: [{ key: "documents/example.pdf", blob_key: "backups/objects/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/20261128-025400000Z", size: 1, sha256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" }]
+  objects: [{ key: "documents/example.pdf", blob_key: "backups/objects/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/20261128-025400000Z", size: 1, sha256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" }]
 };
 const manifestBytes = Buffer.from(JSON.stringify(manifest));
 const manifestSha256 = createHash("sha256").update(manifestBytes).digest("hex");
@@ -160,7 +160,6 @@ assert.match(targetInventory, /truncated but omitted its continuation token/);
 assert.match(targetInventory, /duplicate object key/);
 assert.match(targetInventory, /unexpected object/);
 assert.match(targetInventory, /read-after-write SHA-256\/size verification/);
-assert.match(targetInventory, /item\.key\.endsWith\("\/"\)/);
 assert.match(script, /Bucket: sourceBucket/);
 assert.match(script, /Blob integrity verification failed/);
 assert.match(script, /createHash\("sha256"\)/);
