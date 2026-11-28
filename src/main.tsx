@@ -4,6 +4,7 @@ import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
+import { readVerifiedSecuritySettings } from "./lib/securitySettingsRead.mjs";
 import { runGuardedFormSubmit } from "./lib/guarded-form-submit.js";
 import { updateInsurancePolicy, deleteInsurancePolicy } from "./lib/insurancePolicyMutations.mjs";
 import { createLatestRequestGuard } from "./lib/latestRequestGuard.mjs";
@@ -14632,21 +14633,10 @@ function SecuritySettingsCard() {
     setSecurityLoading(true);
     setSecurityError("");
     try {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
-      const userId = userData.user?.id;
-      if (!userId) throw new Error("Sessione utente non disponibile.");
-      const { data, error: settingsError } = await supabase
-        .from("user_security_settings")
-        .select("personal_code_enabled")
-        .eq("user_id", userId)
-        .maybeSingle();
-      if (settingsError) throw settingsError;
-      const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
-      if (factorsError) throw factorsError;
+      const securityState = await readVerifiedSecuritySettings(supabase);
       if (requestId !== securityRequestRef.current) return;
-      setCodeEnabled(Boolean(data?.personal_code_enabled));
-      setMfaFactors([...(factors?.totp ?? []), ...(factors?.phone ?? [])].filter((factor: any) => factor.status === "verified"));
+      setCodeEnabled(securityState.codeEnabled);
+      setMfaFactors(securityState.mfaFactors);
     } catch (error) {
       if (requestId === securityRequestRef.current) setSecurityError(error instanceof Error ? error.message : "Impossibile verificare le impostazioni di sicurezza.");
     } finally {
