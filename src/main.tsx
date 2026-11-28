@@ -10048,6 +10048,7 @@ function CondominiumsPage(
 
         <CondominiumDetails
           item={selected}
+          workspaceId={profile.workspaceId}
           onClose={() =>
             setSelected(null)
           }
@@ -10277,6 +10278,7 @@ function CondominiumDetails(
   const [selectedMemberDetail, setSelectedMemberDetail] = useState<CondominiumMember | null>(null);
   const {
     item,
+    workspaceId,
     onClose,
     onEdit,
     onDelete,
@@ -10526,7 +10528,7 @@ function CondominiumDetails(
       </div>
 
 
-      <InsurancePoliciesSection condominiumId={item.id} isAdministrator={isAdministrator} />
+      <InsurancePoliciesSection workspaceId={workspaceId} condominiumId={item.id} isAdministrator={isAdministrator} />
 
       <div className="detail-grid">
 
