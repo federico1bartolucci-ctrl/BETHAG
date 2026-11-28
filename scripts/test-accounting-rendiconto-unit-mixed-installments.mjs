@@ -123,3 +123,21 @@ const overScheduledPlusManual = calculateRendicontoUnitBalances({
 assert.equal(overScheduledPlusManual[0].paid, 30);
 assert.equal(overScheduledPlusManual[0].residual, 90, "standalone manual installment must remain separate");
 console.log("Accounting rendiconto over-scheduled installment guard: PASS");
+
+
+// A superseded Accorpata row must not be added on top of the active unified installment.
+// The legacy row would otherwise make the same 100-euro allocation appear fully paid.
+const consolidatedOnly = calculateRendicontoUnitBalances({
+  allocations: [{ id:"a-consolidated", ledger_entry_id:"l-consolidated", unit_id:"u1", amount:100, paid_amount:0 }],
+  installments: [
+    { id:"old-unit-row", ledger_entry_id:"l-consolidated", unit_id:"u1", member_id:null, amount:100, paid_amount:100, status:"Accorpata" },
+    { id:"active-owner-row", ledger_entry_id:"l-consolidated", unit_id:null, member_id:"m1", amount:100, paid_amount:30, status:"Da pagare" },
+  ],
+  units: [{ id:"u1", unit_code:"A-1" }],
+  members: [{ id:"m1", unit_id:"u1", active:true }],
+  yearId: "2026",
+});
+assert.equal(consolidatedOnly[0].installments, 100, "only the active unified installment must be counted");
+assert.equal(consolidatedOnly[0].installmentPaid, 30);
+assert.equal(consolidatedOnly[0].paid, 30, "the historical Accorpata payment must not be counted again");
+assert.equal(consolidatedOnly[0].residual, 70, "the active installment must retain its actual 70-euro residual");
