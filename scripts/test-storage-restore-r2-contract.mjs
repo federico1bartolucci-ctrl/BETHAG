@@ -10,7 +10,7 @@ const manifest = {
   created_at: "2026-11-28T02:54:00.000Z",
   source_bucket: "bethag-documents",
   object_count: 1,
-  objects: [{ key: "documents/example.pdf", blob_key: "backups/objects/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/20261128-025400000Z", size: 1, sha256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" }]
+  objects: [{ key: "documents/example.pdf", blob_key: "backups/objects/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/20261128-025400000Z", size: 1, sha256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" }]
 };
 const manifestBytes = Buffer.from(JSON.stringify(manifest));
 const manifestSha256 = createHash("sha256").update(manifestBytes).digest("hex");
@@ -30,6 +30,17 @@ function previousOptionalDigestParser(bytes, metadata) {
     throw new Error("Unsupported or structurally invalid BETHAG Storage manifest");
   }
   return parsed;
+}
+
+function previousDryRunEntryAccepted(item) {
+  return !!item && typeof item.key === "string" && !!item.key &&
+    !item.key.startsWith("/") && !item.key.includes(String.fromCharCode(92)) &&
+    typeof item.blob_key === "string" &&
+    item.blob_key.startsWith("backups/objects/") &&
+    /^[a-f0-9]{64}\/[A-Za-z0-9T._-]+$/.test(item.blob_key.slice("backups/objects/".length)) &&
+    /^[a-f0-9]{64}$/.test(item.sha256) &&
+    Number.isSafeInteger(item.size) && item.size >= 0 &&
+    item.blob_key.slice("backups/objects/".length).split("/")[0] === item.sha256;
 }
 
 // Reproduce the old fail-open path: valid JSON was accepted when object metadata
@@ -75,6 +86,41 @@ assert.throws(
   /metadata format mismatch/,
 );
 
+// Reproduce the dry-run gap: the previous source-entry preflight accepted a
+// folder-marker key, while the apply-only target inventory rejected it later.
+const folderMarkerManifest = {
+  ...manifest,
+  object_count: 2,
+  objects: [...manifest.objects, { ...manifest.objects[0], key: "empty-folder/" }],
+};
+const folderMarkerBytes = Buffer.from(JSON.stringify(folderMarkerManifest));
+const folderMarkerMetadata = {
+  format: "bethag-storage-backup-v1",
+  sha256: createHash("sha256").update(folderMarkerBytes).digest("hex"),
+};
+assert.equal(previousDryRunEntryAccepted(folderMarkerManifest.objects[1]), true,
+  "the previous dry-run source preflight accepted a folder-marker object key");
+assert.deepEqual(previousOptionalDigestParser(folderMarkerBytes, folderMarkerMetadata), folderMarkerManifest);
+assert.throws(
+  () => parseAndVerifyStorageRestoreManifest(folderMarkerBytes, folderMarkerMetadata),
+  /invalid or unsafe object key/,
+  "dry-run and apply must reject manifest keys that the target inventory cannot restore",
+);
+
+const duplicateManifest = {
+  ...manifest,
+  object_count: 2,
+  objects: [...manifest.objects, { ...manifest.objects[0] }],
+};
+const duplicateBytes = Buffer.from(JSON.stringify(duplicateManifest));
+assert.throws(
+  () => parseAndVerifyStorageRestoreManifest(duplicateBytes, {
+    format: "bethag-storage-backup-v1",
+    sha256: createHash("sha256").update(duplicateBytes).digest("hex"),
+  }),
+  /duplicate source object keys/,
+);
+
 const script = await readFile("scripts/restore-supabase-storage-from-r2.mjs", "utf8");
 const manifestHelper = await readFile("scripts/storage-restore-manifest.mjs", "utf8");
 const targetPreflight = await readFile("scripts/storage-restore-target-empty.mjs", "utf8");
@@ -89,6 +135,8 @@ assert.equal(packageJson.scripts.test.split("test-storage-restore-r2-contract.mj
 
 assert.ok(manifestHelper.includes("bethag-storage-backup/v1"));
 assert.ok(manifestHelper.includes("Manifest is missing a valid SHA-256 metadata digest"));
+assert.ok(manifestHelper.includes("assertStorageRestoreManifestObjectKeys(manifest.objects)"));
+assert.ok(targetInventory.includes("assertStorageRestoreManifestObjectKeys(manifestObjects)"));
 assert.match(script, /--dry-run/);
 assert.match(script, /--apply/);
 assert.match(script, /RESTORE_CONFIRM_TARGET/);
@@ -112,7 +160,6 @@ assert.match(targetInventory, /truncated but omitted its continuation token/);
 assert.match(targetInventory, /duplicate object key/);
 assert.match(targetInventory, /unexpected object/);
 assert.match(targetInventory, /read-after-write SHA-256\/size verification/);
-assert.match(targetInventory, /item\.key\.endsWith\("\/"\)/);
 assert.match(script, /Bucket: sourceBucket/);
 assert.match(script, /Blob integrity verification failed/);
 assert.match(script, /createHash\("sha256"\)/);
