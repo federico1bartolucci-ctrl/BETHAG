@@ -118,3 +118,74 @@ La fingerprint sopra è la **candidata corrente** per il commit indicato. Non es
 I controlli Supabase Advisory Security e Health interrogati su Production e QA non hanno restituito lint. Questo risultato non sostituisce il preflight SQL completo né la verifica Dashboard Data API.
 
 **Stato:** CI e collaudo QA completati; approvazione del proprietario della coppia SHA/fingerprint, preflight locale read-only e gate operativi ancora pendenti. Nessuna scrittura, migrazione, merge o deploy Production eseguito. Production resta **NO-GO**; APP-14 resta PARTIAL fino al postflight e agli smoke test autenticati Production.
+
+## Rettifica di riconciliazione ledger e stato operativo — 2026-11-08
+
+Questa sezione è una rettifica append-only e prevale sulle sezioni precedenti quando riportano conteggi, stato della finestra, approvazioni o candidato eseguibile non più attuali. Le sezioni storiche restano conservate come traccia delle verifiche effettuate nei rispettivi momenti.
+
+### 1. Ledger live verificati in sola lettura
+
+Lo snapshot `supabase/rebuild/live-migration-ledgers-20261105.json`, acquisito il 2026-11-07, e il confronto dei registri live restituiscono:
+
+- Production: **248** record.
+- QA: **283** record.
+- Coppie esatte versione/nome comuni: **247**.
+- QA-only: **36** record.
+- Production-only: **1** record, `20261104222229_reconcile_production_acl_least_privilege`.
+
+La differenza netta è 35 record (283 - 248), ma il confronto puntuale è 36 record QA-only contro 1 Production-only. Non descrivere quindi 35 come numero dei record esclusivi QA.
+
+I 36 record QA-only sono classificati nel documento `docs/release/PRODUCTION-MIGRATION-RECONCILIATION-PLAN-20261108.md`:
+- 5 baseline della ricostruzione QA, da non trasferire a Production;
+- 12 migrazioni canoniche QA-only da valutare singolarmente;
+- 19 record QA-specifici/storici, da non riprodurre alla cieca.
+
+La migrazione Production-only `20261104222229_reconcile_production_acl_least_privilege` è già applicata e deve restare nella storia Production. Non va riapplicata né copiata in QA per pareggiare i conteggi.
+
+### 2. Interpretazione della sequenza congelata
+
+Il manifest `supabase/rebuild/production-migration-cutover-freeze-20261105.json` contiene una sequenza candidata di 19 migrazioni e i relativi hash. Tale sequenza è un artefatto congelato di una precedente preparazione al cutover: **non è una classificazione dei 36 record QA-only** e non dimostra, da sola, che tutte le 19 migrazioni siano ancora necessarie o autorizzate per il candidato corrente.
+
+Non modificare retroattivamente l'ordine o gli hash congelati. Prima di un eventuale cutover occorre completare una matrice effetto-per-effetto che dimostri, per ogni migrazione candidata, l'effetto già presente o mancante in Production, l'eventuale equivalente con timestamp diverso, le dipendenze e la necessità di una nuova migrazione forward. La lista finale di esecuzione dovrà essere una decisione successiva, esplicita e approvata; non deriva automaticamente dalla sequenza congelata.
+
+### 3. Differenze di catalogo da considerare
+
+Il confronto read-only eseguito nella sessione dell'8 novembre ha rilevato:
+- 48 relazioni pubbliche in entrambi gli ambienti;
+- 627 colonne in QA e 626 in Production; la differenza nota è `workspace_members.data`;
+- nessuna differenza rilevata negli indici, vincoli, policy RLS e privilegi sulle tabelle;
+- 173 funzioni in QA e 171 in Production, con differenze di implementazione e ACL da esaminare;
+- un trigger aggiuntivo in QA e `pg_net` presente solo in QA;
+- concessioni EXECUTE aggiuntive su funzioni private in QA e due funzioni trigger con EXECUTE PUBLIC in Production.
+
+Questi dati sono un inventario comparativo, non una prescrizione di applicare tutte le differenze in Production. La colonna `workspace_members.data` e i metadati dei comproprietari devono essere trattati separatamente: la prima ha una migrazione canonica additiva disponibile ma non applicata a Production; i secondi restano QA-specifici finché non ne sia dimostrata la necessità e definita una migrazione compatibile, senza trasferire dati di test.
+
+### 4. Evidenze CI e commit: non trasferire certificazioni
+
+I workflow final QA, build/PostgreSQL 17 e baseline safety precedentemente citati con esito SUCCESS sono riferiti ai rispettivi SHA storici, non automaticamente al commit corrente di `main` né al nuovo commit documentale della PR #63.
+
+In particolare:
+- i run final QA/build/baseline sul commit `d494ce5eca3c1c59f9a94827bd6258483cfbbac2` attestano quel commit;
+- sul commit `f28fc8269fd73d6dd29a19dabeeb9fe5e1a28b6f` risultano build e deploy GitHub Pages completati con SUCCESS, ma ciò non equivale a una nuova esecuzione Final QA APP-01..APP-15 sullo stesso SHA;
+- la PR #63 aggiunge soltanto documentazione. Al momento di questa rettifica non risultano workflow CI eseguiti sul suo head documentale.
+
+APP-01..APP-13 e APP-15 hanno evidenza positiva nei run QA richiamati sopra. APP-14 resta **PARTIAL / POST-CUTOVER** perché richiede postflight e smoke test autenticati sul database Production dopo un cutover autorizzato. Non dichiarare APP-14 superato sulla base del solo collaudo QA.
+
+### 5. Finestra, autorizzazione e decisione
+
+La finestra registrata nel manifest, 8 novembre 2026 ore 00:00–04:00 Europe/Rome, è trascorsa. Non costituisce autorizzazione attuale e non può essere riutilizzata.
+
+Il manifest continua a indicare:
+- `approval_scope = READ_ONLY_PREFLIGHT_ONLY`;
+- `production_apply_authorized = false`;
+- `approved_execution_commit_sha = null`;
+- `execution_approval_status = PENDING_FINAL_DOCUMENTATION_HEAD_APPROVAL`.
+
+L'approvazione read-only/preflight precedente non autorizza apply, merge, deploy o scritture Production. Un eventuale nuovo cutover richiede una nuova finestra, un piano aggiornato, CI sul commit esatto, preflight read-only, verifica backup/Data API, matrice migrazioni definitiva e approvazione scritta riferita all'esatto SHA e agli hash effettivamente selezionati.
+
+**Decisione corrente: Production NO-GO.** Nessuna migrazione, scrittura ledger, merge o deploy Production è autorizzato da questa rettifica. Il deploy GitHub Pages già registrato è distinto dalle operazioni sul database Supabase.
+
+### 6. Documento di riferimento aggiornato
+
+La classificazione completa e il piano operativo aggiornato sono in `docs/release/PRODUCTION-MIGRATION-RECONCILIATION-PLAN-20261108.md`, aggiunto nella PR #63. Questa rettifica mantiene la storia precedente e corregge soltanto l'interpretazione corrente dei ledger, delle evidenze CI e dei gate di cutover.
+
