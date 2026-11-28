@@ -78,6 +78,14 @@ await assert.rejects(
 const script = await readFile("scripts/restore-supabase-storage-from-r2.mjs", "utf8");
 const targetPreflight = await readFile("scripts/storage-restore-target-empty.mjs", "utf8");
 const targetInventory = await readFile("scripts/storage-restore-target-inventory.mjs", "utf8");
+const backupScript = await readFile("scripts/backup-supabase-storage-to-r2.mjs", "utf8");
+const packageJson = JSON.parse(await readFile("package.json", "utf8"));
+assert.match(script, /parseAndVerifyStorageRestoreManifest\\(bytes, response\\.Metadata\\)/);
+assert.doesNotMatch(script, /if \\(response\\.Metadata\\?\\.sha256\\)/);
+assert.match(script, /from "\\.\\/storage-restore-manifest\\.mjs"/);
+assert.match(backupScript, /sha256: createHash\\("sha256"\\)\\.update\\(manifestBytes\\)\\.digest\\("hex"\\)/);
+assert.equal(packageJson.scripts.test.split("test-storage-restore-r2-contract.mjs").length - 1, 1);
+
 assert.match(script, /bethag-storage-backup\/v1/);
 assert.match(script, /--dry-run/);
 assert.match(script, /--apply/);
