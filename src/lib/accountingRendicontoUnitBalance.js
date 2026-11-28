@@ -1,3 +1,5 @@
+import { getReportableAccountingInstallments } from "./accountingExpensePaidSummary.js";
+
 function cents(value) {
   return Math.round(Number(value || 0) * 100) / 100;
 }
@@ -78,7 +80,7 @@ export function calculateRendicontoUnitBalances({
     }
   };
 
-  for (const installment of installments) {
+  for (const installment of getReportableAccountingInstallments(installments)) {
     if (installment.unit_id) {
       addInstallment(installment.unit_id, installment.amount, installment.paid_amount, installment.ledger_entry_id);
       continue;
