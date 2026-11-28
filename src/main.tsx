@@ -6,6 +6,7 @@ import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { runGuardedFormSubmit } from "./lib/guarded-form-submit.js";
 import { updateInsurancePolicy, deleteInsurancePolicy } from "./lib/insurancePolicyMutations.mjs";
+import { validateInsurancePolicyForm } from "./lib/insurancePolicyValidation.mjs";
 import { createLatestRequestGuard } from "./lib/latestRequestGuard.mjs";
 import { applyInsurancePoliciesLoadFailure, selectVisibleInsurancePolicies } from "./lib/insurancePolicyLoadState.mjs";
 import { createAuthSessionRevision } from "./lib/auth-session-revision.mjs";
@@ -17367,12 +17368,9 @@ function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condomin
 
   const savePolicy = async () => {
     if (!supabase || !supabaseConfigured) return;
-    if (!form.company_name.trim()) {
-      alert("Inserisci la compagnia assicurativa.");
-      return;
-    }
-    if (!form.policy_number.trim()) {
-      alert("Inserisci il numero di polizza.");
+    const validationError = validateInsurancePolicyForm(form);
+    if (validationError) {
+      alert(validationError);
       return;
     }
     const workspaceId = await getActiveWorkspaceId();
