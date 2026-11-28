@@ -35,42 +35,42 @@ function previousOptionalDigestParser(bytes, metadata) {
 // Reproduce the old fail-open path: valid JSON was accepted when object metadata
 // (and therefore the manifest digest) was absent.
 assert.deepEqual(previousOptionalDigestParser(manifestBytes, undefined), manifest);
-await assert.rejects(
+assert.throws(
   () => parseAndVerifyStorageRestoreManifest(manifestBytes, undefined),
   /missing a valid SHA-256 metadata digest/,
   "a manifest without its backup-writer digest must not be restorable",
 );
-await assert.rejects(
+assert.throws(
   () => parseAndVerifyStorageRestoreManifest(manifestBytes, {}),
   /missing a valid SHA-256 metadata digest/,
 );
-await assert.rejects(
+assert.throws(
   () => parseAndVerifyStorageRestoreManifest(manifestBytes, { sha256: "not-a-digest" }),
   /missing a valid SHA-256 metadata digest/,
 );
-await assert.rejects(
+assert.throws(
   () => parseAndVerifyStorageRestoreManifest(manifestBytes, { sha256: manifestSha256.toUpperCase() }),
   /missing a valid SHA-256 metadata digest/,
 );
-await assert.rejects(
+assert.throws(
   () => parseAndVerifyStorageRestoreManifest(manifestBytes, { sha256: "c".repeat(64) }),
   /Manifest SHA-256 metadata mismatch/,
 );
 assert.deepEqual(parseAndVerifyStorageRestoreManifest(manifestBytes, validMetadata), manifest);
-await assert.rejects(
+assert.throws(
   () => parseAndVerifyStorageRestoreManifest(Buffer.from("{"), {
     sha256: createHash("sha256").update("{").digest("hex")
   }),
   /Manifest is not valid JSON/,
 );
-await assert.rejects(
+assert.throws(
   () => parseAndVerifyStorageRestoreManifest(Buffer.from("null"), {
     sha256: createHash("sha256").update("null").digest("hex")
   }),
   /structurally invalid/,
 );
 const wrongMetadataFormat = { ...validMetadata, format: "other-format" };
-await assert.rejects(
+assert.throws(
   () => parseAndVerifyStorageRestoreManifest(manifestBytes, wrongMetadataFormat),
   /metadata format mismatch/,
 );
@@ -87,7 +87,8 @@ assert.ok(script.includes('from "./storage-restore-manifest.mjs"'));
 assert.ok(backupScript.includes('sha256: createHash("sha256").update(manifestBytes).digest("hex")'));
 assert.equal(packageJson.scripts.test.split("test-storage-restore-r2-contract.mjs").length - 1, 1);
 
-assert.match(script, /bethag-storage-backup\/v1/);
+assert.ok(manifestHelper.includes("bethag-storage-backup/v1"));
+assert.ok(manifestHelper.includes("Manifest is missing a valid SHA-256 metadata digest"));
 assert.match(script, /--dry-run/);
 assert.match(script, /--apply/);
 assert.match(script, /RESTORE_CONFIRM_TARGET/);
