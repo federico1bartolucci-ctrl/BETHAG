@@ -15,6 +15,14 @@ function normalizeIds(values, label) {
   return result;
 }
 
+export function mapWorkDocumentLinkIds(rows) {
+  if (!Array.isArray(rows)) {
+    throw new Error("Risposta dei collegamenti documentali non valida.");
+  }
+  return normalizeIds(rows.map((row) => row?.document_id), "Current links");
+}
+
+
 export function planWorkDocumentLinkChanges(currentIds, desiredIds) {
   const current = normalizeIds(currentIds, "Current links");
   const desired = normalizeIds(desiredIds, "Desired links");
