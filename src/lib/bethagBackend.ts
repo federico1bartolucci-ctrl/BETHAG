@@ -546,9 +546,16 @@ async function syncBackendStateNow(
   if (canSyncModule("attivita")) {
     const workIds = (state.condominiumWorks ?? []).map((item: any) => String(item.id)).filter(Boolean);
     if (workIds.length) {
-      const { data: progressRows, error: progressRowsError } = await supabase
-        .from("condominium_work_progress").select("work_id,amount").eq("workspace_id", workspaceId).in("work_id", workIds);
+      const { data: allWorkspaceProgressRows, error: progressRowsError } =
+        await loadWorkspacePaginatedRows(supabase, "condominium_work_progress", workspaceId, {
+          select: "work_id,amount,created_at,id",
+          orderBy: "created_at",
+        });
       if (progressRowsError) throw progressRowsError;
+      const selectedWorkIds = new Set(workIds);
+      const progressRows = (allWorkspaceProgressRows ?? []).filter((row: any) =>
+        selectedWorkIds.has(String(row.work_id))
+      );
       for (const row of progressRows ?? []) {
         const key = String(row.work_id);
         cumulativeWorkActualAmountById.set(key, (cumulativeWorkActualAmountById.get(key) ?? 0) + Math.max(0, Number(row.amount) || 0));

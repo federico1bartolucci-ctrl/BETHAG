@@ -286,4 +286,10 @@ const paginatedTables = [
 for (const table of paginatedTables) {
   assert.match(backend, new RegExp(`loadWorkspacePaginatedRows\\(\\s*supabase\\s*,\\s*["']${table}["']`), `Bootstrap query for ${table} must be paginated`);
 }
-console.log(`Workspace keyset pagination runtime regression: PASS (${paginatedTables.length} bootstrap collections)`);
+// Work-progress reconciliation previously used a single .in(workIds) query,
+ // which could silently truncate more than 1,000 rows in a workspace.
+ assert.match(backend, /loadWorkspacePaginatedRows\(supabase,\s*["']condominium_work_progress["']/,
+   "work progress reconciliation must use paginated workspace loading");
+ assert.doesNotMatch(backend, /\.from\(["']condominium_work_progress["']\)\s*\.select\(["']work_id,amount["']\)\s*\.eq\(["']workspace_id["']\s*,\s*workspaceId\)\s*\.in\(["']work_id["']\s*,\s*workIds\)/,
+   "work progress must not retain the capped one-shot .in query");
+ console.log(`Workspace keyset pagination runtime regression: PASS (${paginatedTables.length} bootstrap collections + work-progress sync pagination wiring)`);
