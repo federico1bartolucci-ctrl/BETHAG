@@ -8,7 +8,7 @@ export function parseBethagAmount(value, fallback = Number.NaN) {
   if (typeof value === "number") return Number.isFinite(value) ? value : fallback;
   if (value == null) return fallback;
 
-  let raw = String(value).trim();
+  let raw = String(value).trim().replace(/\u2212/g, "-");
   if (!raw) return fallback;
 
   let negative = false;
@@ -16,7 +16,20 @@ export function parseBethagAmount(value, fallback = Number.NaN) {
     negative = true;
     raw = raw.slice(1, -1).trim();
   }
-  raw = raw.replace(/\u2212/g, "-").replace(/\s|\u00a0|\u202f/g, " ").replace(/[^\d.,+-]/g, "").replace(/\s/g, "");
+
+  // Match the invoice parser's supported currency decorations. Currency
+  // markers are allowed only once, at the beginning or end of the amount.
+  const leadingCurrency = /^(?:[€$£¥]\s*|EUR\s+)/i.test(raw);
+  const trailingCurrency = /(?:\s*[€$£¥]|\s+EUR)$/i.test(raw);
+  if (leadingCurrency && trailingCurrency) return fallback;
+  if (leadingCurrency) raw = raw.replace(/^(?:[€$£¥]\s*|EUR\s+)/i, "").trim();
+  else if (trailingCurrency) raw = raw.replace(/(?:\s*[€$£¥]|\s+EUR)$/i, "").trim();
+
+  // Do not silently delete OCR/text corruption (e.g. "12abc34" -> "1234").
+  // Only numeric punctuation, signs and the previously supported whitespace
+  // separators may remain after the optional currency decoration is removed.
+  if (!/^[\d.,+\-\s\u00a0\u202f]+$/.test(raw)) return fallback;
+  raw = raw.replace(/[\s\u00a0\u202f]/g, "");
   if (!raw || !/\d/.test(raw)) return fallback;
 
   if (/[+-]/.test(raw)) {
