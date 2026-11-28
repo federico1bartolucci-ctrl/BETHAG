@@ -1,7 +1,11 @@
 export function calculateLedgerExpensePaid(ledgerEntries, installments) {
   const outgoing = ledgerEntries.filter((entry) => entry.direction === "Uscita");
   const paidExpenses = outgoing.reduce((total, entry) => {
-    const linkedInstallments = installments.filter((installment) => installment.ledger_entry_id === entry.id);
+    const linkedInstallments = installments.filter(
+      (installment) =>
+        installment.ledger_entry_id === entry.id &&
+        installment.status !== "Accorpata"
+    );
     const paid = linkedInstallments.length > 0
       ? linkedInstallments.reduce((sum, installment) => sum + Number(installment.paid_amount || 0), 0)
       : entry.payment_status === "Pagato" ? Number(entry.amount || 0) : 0;
