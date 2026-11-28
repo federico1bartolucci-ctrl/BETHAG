@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { parseAndVerifyStorageRestoreManifest } from "./storage-restore-manifest.mjs";
 import {
   S3Client, GetObjectCommand, ListObjectsV2Command, PutObjectCommand
 } from "@aws-sdk/client-s3";
@@ -44,21 +45,7 @@ async function readManifest(client, bucket, key) {
   stage = "R2 manifest read";
   const response = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
   const bytes = await bodyBytes(response.Body);
-  if (response.Metadata?.sha256) {
-    const actual = createHash("sha256").update(bytes).digest("hex");
-    if (actual !== response.Metadata.sha256) throw new Error("Manifest SHA-256 metadata mismatch");
-  }
-  let manifest;
-  try { manifest = JSON.parse(bytes.toString("utf8")); }
-  catch { throw new Error("Manifest is not valid JSON"); }
-  if (manifest.format !== "bethag-storage-backup/v1" ||
-      !Array.isArray(manifest.objects) ||
-      manifest.object_count !== manifest.objects.length ||
-      typeof manifest.snapshot_id !== "string" ||
-      !manifest.snapshot_id) {
-    throw new Error("Unsupported or structurally invalid BETHAG Storage manifest");
-  }
-  return manifest;
+  return parseAndVerifyStorageRestoreManifest(bytes, response.Metadata);
 }
 
 async function main() {
