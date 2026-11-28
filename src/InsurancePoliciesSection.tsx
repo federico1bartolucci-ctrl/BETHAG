@@ -3,6 +3,7 @@ import { supabase, supabaseConfigured } from "./lib/supabase";
 import { deleteInsurancePolicy, updateInsurancePolicy } from "./lib/insurancePolicyMutations.mjs";
 import { applyInsurancePoliciesLoadFailure, selectVisibleInsurancePolicies } from "./lib/insurancePolicyLoadState.mjs";
 import { createLatestRequestGuard } from "./lib/latestRequestGuard.mjs";
+import { resolveInsurancePolicyCondominium } from "./lib/insurancePolicyCondominiumScope.mjs";
 
 type InsurancePolicy = {
   id: string;
@@ -57,17 +58,21 @@ function money(value: number | null) {
 }
 
 export default function InsurancePoliciesSection({
+  workspaceId,
   condominiumId,
   isAdministrator = false,
 }: {
+  workspaceId: string | null;
   condominiumId: number;
   isAdministrator?: boolean;
 }) {
-  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [dbCondominiumId, setDbCondominiumId] = useState<string | null>(null);
   const [policies, setPolicies] = useState<InsurancePolicy[]>([]);
   const [policiesCondominiumId, setPoliciesCondominiumId] = useState<number | null>(null);
-  const visiblePolicies = selectVisibleInsurancePolicies({ policies, policiesCondominiumId, condominiumId });
+  const [policiesWorkspaceId, setPoliciesWorkspaceId] = useState<string | null>(null);
+  const visiblePolicies = policiesWorkspaceId === workspaceId
+    ? selectVisibleInsurancePolicies({ policies, policiesCondominiumId, condominiumId })
+    : [];
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -76,35 +81,40 @@ export default function InsurancePoliciesSection({
   const [form, setForm] = useState<Omit<InsurancePolicy, "id">>(emptyPolicy);
 
   const loadGuardRef = useRef(createLatestRequestGuard());
+  const currentWorkspaceIdRef = useRef(workspaceId);
   const currentCondominiumIdRef = useRef(condominiumId);
+  currentWorkspaceIdRef.current = workspaceId;
   currentCondominiumIdRef.current = condominiumId;
 
-  const load = async (clearForCondominiumChange = false) => {
-    if (currentCondominiumIdRef.current !== condominiumId) return;
+  const load = async (clearForContextChange = false) => {
+    if (currentWorkspaceIdRef.current !== workspaceId || currentCondominiumIdRef.current !== condominiumId) return;
     const request = loadGuardRef.current.begin();
-    const isCurrent = () => request.isCurrent() && currentCondominiumIdRef.current === condominiumId;
-    if (clearForCondominiumChange) {
+    const isCurrent = () =>
+      request.isCurrent()
+      && currentWorkspaceIdRef.current === workspaceId
+      && currentCondominiumIdRef.current === condominiumId;
+    if (clearForContextChange) {
       setPolicies([]);
-      setWorkspaceId(null);
+      setPoliciesCondominiumId(null);
+      setPoliciesWorkspaceId(null);
       setDbCondominiumId(null);
     }
     if (isCurrent()) setLoading(true);
     setError("");
     try {
       if (!supabaseConfigured || !supabase) throw new Error("Servizio polizze assicurative non disponibile.");
-      const { data: condominium, error: condominiumError } = await supabase
-        .from("condominiums")
-        .select("id, workspace_id")
-        .eq("legacy_id", condominiumId)
-        .maybeSingle();
+      if (!workspaceId) throw new Error("Workspace del condominio non disponibile.");
+      const condominium = await resolveInsurancePolicyCondominium({
+        client: supabase,
+        workspaceId,
+        legacyCondominiumId: condominiumId,
+      });
       if (!isCurrent()) return;
-      if (condominiumError) throw condominiumError;
-      if (!condominium?.id) throw new Error("Impossibile individuare il condominio.");
       setDbCondominiumId(condominium.id);
-      setWorkspaceId(condominium.workspace_id);
       const { data, error: policyError } = await supabase
         .from("condominium_insurance_policies")
         .select("*")
+        .eq("workspace_id", workspaceId)
         .eq("condominium_id", condominium.id)
         .order("end_date", { ascending: true });
       if (!isCurrent()) return;
@@ -118,6 +128,7 @@ export default function InsurancePoliciesSection({
         notes: row.notes || "",
       })));
       setPoliciesCondominiumId(condominiumId);
+      setPoliciesWorkspaceId(workspaceId);
     } catch (e) {
       if (isCurrent()) {
         applyInsurancePoliciesLoadFailure({
@@ -129,6 +140,7 @@ export default function InsurancePoliciesSection({
           setLoadError: setError,
           setLoadErrorCondominiumId: () => {},
         });
+        setPoliciesWorkspaceId(workspaceId);
       }
     } finally {
       if (isCurrent()) setLoading(false);
@@ -141,7 +153,7 @@ export default function InsurancePoliciesSection({
     setForm(emptyPolicy);
     void load(true);
     return () => loadGuardRef.current.invalidate();
-  }, [condominiumId]);
+  }, [workspaceId, condominiumId]);
 
   const closeForm = () => {
     setOpenForm(false);
