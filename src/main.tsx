@@ -4,6 +4,7 @@ import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
+import { readVerifiedSecuritySettings } from "./lib/securitySettingsRead.mjs";
 import { runGuardedFormSubmit } from "./lib/guarded-form-submit.js";
 import { updateInsurancePolicy, deleteInsurancePolicy } from "./lib/insurancePolicyMutations.mjs";
 import { createLatestRequestGuard } from "./lib/latestRequestGuard.mjs";
@@ -14611,6 +14612,9 @@ function CollaboratorsPage({
 
 
 function SecuritySettingsCard() {
+  const securityRequestRef = useRef(0);
+  const [securityLoading, setSecurityLoading] = useState(true);
+  const [securityError, setSecurityError] = useState("");
   const [codeEnabled, setCodeEnabled] = useState(false);
   const [mfaFactors, setMfaFactors] = useState<any[]>([]);
   const [enrolling, setEnrolling] = useState(false);
@@ -14620,17 +14624,30 @@ function SecuritySettingsCard() {
   const [loading, setLoading] = useState(false);
 
   const refreshSecurity = async () => {
-    if (!supabase) return;
-    const { data: userData } = await supabase.auth.getUser();
-    const userId = userData.user?.id;
-    if (!userId) return;
-    const { data } = await supabase.from("user_security_settings").select("personal_code_enabled").eq("user_id", userId).maybeSingle();
-    setCodeEnabled(Boolean(data?.personal_code_enabled));
-    const { data: factors } = await supabase.auth.mfa.listFactors();
-    setMfaFactors([...(factors?.totp ?? []), ...(factors?.phone ?? [])].filter((factor: any) => factor.status === "verified"));
+    if (!supabase) {
+      setSecurityError("Supabase non configurato.");
+      setSecurityLoading(false);
+      return;
+    }
+    const requestId = ++securityRequestRef.current;
+    setSecurityLoading(true);
+    setSecurityError("");
+    try {
+      const securityState = await readVerifiedSecuritySettings(supabase);
+      if (requestId !== securityRequestRef.current) return;
+      setCodeEnabled(securityState.codeEnabled);
+      setMfaFactors(securityState.mfaFactors);
+    } catch (error) {
+      if (requestId === securityRequestRef.current) setSecurityError(error instanceof Error ? error.message : "Impossibile verificare le impostazioni di sicurezza.");
+    } finally {
+      if (requestId === securityRequestRef.current) setSecurityLoading(false);
+    }
   };
 
-  useEffect(() => { void refreshSecurity(); }, []);
+  useEffect(() => {
+    void refreshSecurity();
+    return () => { securityRequestRef.current += 1; };
+  }, []);
 
   const configureCode = async () => {
     if (!supabase) return;
@@ -14716,23 +14733,29 @@ function SecuritySettingsCard() {
     finally { setLoading(false); }
   };
 
+  const securityVerified = !securityLoading && !securityError;
+
   return <section className="card" style={{marginBottom:18}}>
     <span className="eyebrow">Sicurezza dell'account</span>
     <h2>Protezione opzionale</h2>
     <p className="section-subtitle">Entrambe le protezioni sono facoltative. Se le abiliti, BETHAG le utilizzerà senza modificare l'accesso degli utenti che scelgono di non attivarle.</p>
+    {securityLoading && <p className="section-subtitle">Verifica delle impostazioni di sicurezza in corso…</p>}
+    {securityError && <div className="error-banner" role="alert"><p>Impossibile verificare lo stato delle protezioni: {securityError}</p><button type="button" className="secondary-button" onClick={() => void refreshSecurity()}>Riprova</button></div>}
+    {securityVerified && (
     <div className="workspace-grid">
       <div className="info-card">
         <b>🔢 Codice personale</b>
         <p>{codeEnabled ? "Attivo: viene richiesto solo per le operazioni ad alta sicurezza protette. Puoi disattivarlo in qualsiasi momento." : "Disattivato: nessun codice personale aggiuntivo viene richiesto. L'attivazione è facoltativa."}</p>
-        <button className={codeEnabled ? "danger-button" : "secondary-button"} type="button" disabled={loading} onClick={() => void (codeEnabled ? disableCode() : configureCode())}>{codeEnabled ? "Disattiva codice" : "Attiva codice"}</button>
+        <button className={codeEnabled ? "danger-button" : "secondary-button"} type="button" disabled={loading || securityLoading || !!securityError} onClick={() => void (codeEnabled ? disableCode() : configureCode())}>{codeEnabled ? "Disattiva codice" : "Attiva codice"}</button>
       </div>
       <div className="info-card">
         <b>🛡️ Autenticazione a due fattori</b>
         <p>{mfaFactors.length ? "Attiva: al login BETHAG proporrà il secondo fattore, ma potrai scegliere di accedere senza utilizzarlo. Puoi disattivarlo in qualsiasi momento." : "Disattivata: il login continua con e-mail e password. L'attivazione della 2FA è facoltativa."}</p>
-        {!mfaFactors.length && <button className="secondary-button" type="button" disabled={loading} onClick={() => void startMfaEnrollment()}>Attiva 2FA</button>}
+        {!mfaFactors.length && <button className="secondary-button" type="button" disabled={loading || securityLoading || !!securityError} onClick={() => void startMfaEnrollment()}>Attiva 2FA</button>}
         {mfaFactors.map((factor) => <div key={factor.id} style={{marginTop:10}}><span>{factor.factor_type === "totp" ? "Authenticator TOTP" : "Telefono"}</span> <button className="danger-button" type="button" disabled={loading} onClick={() => void disableMfa(factor)}>Disattiva</button></div>)}
       </div>
     </div>
+    )}
     {enrolling && <div className="form-card" style={{marginTop:16}}>
       <h3>Configura Authenticator</h3>
       <p>Scansiona il QR code con un'app autenticatrice e inserisci il codice generato per confermare.</p>
