@@ -3,6 +3,26 @@ import { createHash } from "node:crypto";
 const MANIFEST_FORMAT = "bethag-storage-backup/v1";
 const MANIFEST_METADATA_FORMAT = "bethag-storage-backup-v1";
 
+export function assertStorageRestoreManifestObjectKeys(objects) {
+  if (!Array.isArray(objects)) {
+    throw new TypeError("Storage restore manifest objects must be an array");
+  }
+
+  const seenKeys = new Set();
+  for (const item of objects) {
+    if (!item || typeof item !== "object" || Array.isArray(item) ||
+        typeof item.key !== "string" || item.key.length === 0 ||
+        item.key.startsWith("/") || item.key.endsWith("/") || item.key.includes("\\\\")) {
+      throw new Error("Manifest contains an invalid or unsafe object key");
+    }
+    if (seenKeys.has(item.key)) {
+      throw new Error("Manifest contains duplicate source object keys");
+    }
+    seenKeys.add(item.key);
+  }
+  return objects;
+}
+
 export function parseAndVerifyStorageRestoreManifest(bytes, metadata) {
   const normalizedBytes = Buffer.isBuffer(bytes)
     ? bytes
@@ -44,5 +64,6 @@ export function parseAndVerifyStorageRestoreManifest(bytes, metadata) {
     throw new Error("Unsupported or structurally invalid BETHAG Storage manifest");
   }
 
+  assertStorageRestoreManifestObjectKeys(manifest.objects);
   return manifest;
 }
