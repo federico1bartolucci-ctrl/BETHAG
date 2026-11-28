@@ -4,7 +4,7 @@ import { localISODate, localISODateAfterDays } from "./lib/local-date";
 import { deleteCondominiumWork } from "./lib/bethagBackend";
 import { deleteRegisterRecordSafely } from "./lib/registerRecordDeletion.mjs";
 import { mapRegisterDocumentRows } from "./lib/registerDocumentRows.mjs";
-import { reconcileWorkDocumentLinks } from "./lib/workDocumentLinks.mjs";
+import { mapWorkDocumentLinkIds, reconcileWorkDocumentLinks } from "./lib/workDocumentLinks.mjs";
 import { canCloseWork, closeWorkWithHistory } from "./lib/workClosure.mjs";
 import { insertActivityWithUniqueLegacyId } from "./lib/activityLegacyId.mjs";
 import { compensateSalPaymentAfterEventFailure } from "./lib/salPaymentCompensation.mjs";
@@ -32,7 +32,23 @@ export default function RegisterPage({workspaceId,condominiums,isAdministrator=f
  const expiring=scopedItems.filter(x=>x.expiry_date&&x.expiry_date<=localISODateAfterDays(30));
  async function saveItem(e:React.FormEvent){e.preventDefault();if(!supabase||!dbId||!form.title.trim())return;setSaving(true);setError("");try{const payload={workspace_id:workspaceId,condominium_id:dbId,...form,expiry_date:form.expiry_date||null,supplier_id:form.supplier_id||null,estimated_amount:Number(form.estimated_amount)||0,title:form.title.trim()};if(editing){if(!editingItemScope||editingItemScope.id!==editing)throw new Error("Contesto originale della voce non disponibile: aggiornamento interrotto.");await updateRegisterItemWithinScope({client:supabase,currentWorkspaceId:workspaceId,currentCondominiumId:dbId,currentSelectedCondominium:selected,originalWorkspaceId:editingItemScope.workspaceId,originalCondominiumId:editingItemScope.condominiumId,originalSelectedCondominium:editingItemScope.selectedCondominium,itemId:editing,payload});}else{const {error}=await supabase.from("condominium_register_items").insert(payload);if(error)throw error;}setEditing(null);setEditingItemScope(null);setShowItemForm(false);setForm({item_type:"Sicurezza",category:"Impianti",title:"",location:"",responsible:"",expiry_date:"",status:"Attivo",notes:"",supplier_id:"",estimated_amount:0});await load();}catch(e:any){setError(e?.message||"Impossibile salvare la voce.");}finally{setSaving(false);}}
  async function saveSupplier(e:React.FormEvent){e.preventDefault();if(!supabase||!dbId||!supplierForm.business_name.trim())return;setSaving(true);setError("");try{const payload={workspace_id:workspaceId,condominium_id:dbId,...supplierForm,contract_start:supplierForm.contract_start||null,contract_end:supplierForm.contract_end||null,business_name:supplierForm.business_name.trim()};const q=editingSupplier?supabase.from("condominium_suppliers").update(payload).eq("id",editingSupplier).eq("workspace_id",workspaceId):supabase.from("condominium_suppliers").insert(payload);const {error}=await q;if(error)throw error;setEditingSupplier(null);setShowSupplierForm(false);setSupplierForm({business_name:"",contact_name:"",fiscal_code:"",vat_number:"",email:"",phone:"",category:"",contract_start:"",contract_end:"",notes:""});await load();}catch(e:any){setError(e?.message||"Impossibile salvare il fornitore.");}finally{setSaving(false);}}
- async function openWorkDocuments(w:Work){if(!supabase||!dbId)return;const {data,error}=await supabase.from("condominium_work_documents").select("document_id").eq("workspace_id",workspaceId).eq("condominium_id",dbId).eq("work_id",w.id);if(error){setError("Impossibile caricare i documenti collegati: "+error.message);return;}setDocumentWork(w);setLinkedDocumentIds((data??[]).map((x:any)=>Number(x.document_id)).filter((id:number)=>Number.isSafeInteger(id)&&id>0));setShowDocuments(true);}
+ async function openWorkDocuments(w:Work){
+  if(!supabase||!dbId)return;
+  try{
+    const {data,error}=await supabase.from("condominium_work_documents")
+      .select("document_id")
+      .eq("workspace_id",workspaceId)
+      .eq("condominium_id",dbId)
+      .eq("work_id",w.id);
+    if(error)throw error;
+    const ids=mapWorkDocumentLinkIds(data);
+    setDocumentWork(w);
+    setLinkedDocumentIds(ids);
+    setShowDocuments(true);
+  }catch(e:any){
+    setError("Impossibile caricare i documenti collegati: "+(e?.message||"risposta non valida."));
+  }
+}
 async function saveWorkDocuments(){
     if(!supabase||!dbId||!documentWork)return;
     setSaving(true);
@@ -47,7 +63,7 @@ async function saveWorkDocuments(){
             .eq("condominium_id",dbId)
             .eq("work_id",documentWork.id);
           if(error)throw error;
-          return (data??[]).map((row:any)=>row.document_id);
+          return mapWorkDocumentLinkIds(data);
         },
         insertLinks:async(ids)=>{
           const rows=ids.map(id=>({
