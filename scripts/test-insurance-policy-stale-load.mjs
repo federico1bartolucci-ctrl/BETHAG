@@ -34,7 +34,11 @@ for (const [path, expectedEffect] of [
   assert.match(source, /const loadGuardRef = useRef\(createLatestRequestGuard\(\)\)/);
   assert.match(source, /const currentCondominiumIdRef = useRef\(condominiumId\)/);
   assert.match(source, expectedEffect, `${path} must invalidate in-flight loads when condominium context changes`);
-  assert.match(source, /const isCurrent = \(\) => request\.isCurrent\(\) && currentCondominiumIdRef\.current === condominiumId/);
+  assert.match(source, /const isCurrent = \(\) =>[\s\S]*request\.isCurrent\(\)[\s\S]*currentCondominiumIdRef\.current === condominiumId/);
+  if (path === "../src/InsurancePoliciesSection.tsx") {
+    assert.match(source, /currentWorkspaceIdRef\.current === workspaceId/, "insurance policy loads must also be scoped to the current workspace");
+    assert.match(source, /\}, \[workspaceId, condominiumId\]\);/, "workspace changes must invalidate insurance policy loads");
+  }
   assert.match(source, /if \(!isCurrent\(\)\) return;/, "stale responses must be discarded before state writes");
 }
 
