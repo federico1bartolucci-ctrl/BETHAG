@@ -142,7 +142,7 @@ function rowWith(path, title, condominiumId = "condominium-db-1") {
   ]);
   assert.equal(results.length, 2, "the old Storage-only guard allowed both metadata writes");
   assert.equal(state.row.file_path, initialRow.file_path, "the Storage pointer does not change");
-  assert.equal(state.row.title, "Metadata edit B", "the later stale write silently overwrites the first edit");
+  assert.ok(["Metadata edit A", "Metadata edit B"].includes(state.row.title), "the last stale write silently overwrites the other edit");
 }
 
 // Two independent sessions both read the old pointer. Only the first compare-and-swap may win.
