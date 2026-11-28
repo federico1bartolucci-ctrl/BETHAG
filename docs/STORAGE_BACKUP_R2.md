@@ -113,7 +113,7 @@ The first successful snapshot on 26 November 2026 contains zero objects because 
 - Bucket Lock and lifecycle: configured and read by the Cloudflare preflight; exact rules are checked at every run.
 - GitHub Environment `storage-backup-production`: configured with nine required secrets. Verify that `STORAGE_BACKUP_ENABLED=true` is configured as a repository-level Actions variable, not only as an Environment variable, before relying on scheduled backups.
 - First successful backup: 26 November 2026; manifest write/read verification passed. `source_object_count=0`, `blobs_uploaded=0`, `blobs_reused=0` because the source bucket was empty.
-- Guarded restore utility: dry-run default, source-blob SHA-256/size verification, empty-target first apply, verified same-manifest resume, read-after-write checks, exact final key inventory, and explicit confirmation gate for writes.
+- Guarded restore utility: dry-run default, source-blob SHA-256/size verification, empty-target first apply, verified same-manifest resume, read-after-write checks, exact final key inventory, and explicit confirmation gate for writes. Resume preflight compares existing objects against both manifest bytes (SHA-256/size) and preserved object metadata (`Content-Type`, `Cache-Control`, `Content-Disposition`, `Content-Encoding`, `Content-Language`, `Expires`, and user metadata); a mismatch aborts without overwriting the target.
 - Restore dry-run: supported using only existing R2 backup credentials; it verifies manifest and blob integrity without contacting Supabase.
 - Non-empty isolated restore drill: NOT RUN; requires a separately provisioned recovery project and four dedicated `SUPABASE_RESTORE_S3_*` secrets.
 - Production and QA data/configuration: unchanged.
