@@ -51,6 +51,46 @@ assert.equal(prepared.rows[0].current_reading, 1244.5);
 assert.equal(prepared.rows[0].consumption, 10);
 assert.equal(prepared.rows[0].unit_id, "unit-1");
 
+const mixedLocaleHeaders = "Unita;Esercizio;Lettura precedente;Lettura attuale;Consumo;Importo";
+function prepareMixedLocale(values) {
+  return prepareConsumptionCsvImport(mixedLocaleHeaders + "\n" + values.join(";"), {
+    workspaceId: "workspace-1",
+    condominiumId: "condo-1",
+    units,
+    fiscalYears,
+  });
+}
+
+// US grouping + decimal: the previous parser silently turned 1,234.50 into 1.23450.
+const usMixedLocale = prepareMixedLocale(["A1", "2026", "1,234.50", "1,244.50", "10.00", "2,500.75"]);
+assert.equal(usMixedLocale.errors.length, 0);
+assert.equal(usMixedLocale.rows[0].previous_reading, 1234.5);
+assert.equal(usMixedLocale.rows[0].current_reading, 1244.5);
+assert.equal(usMixedLocale.rows[0].consumption, 10);
+assert.equal(usMixedLocale.rows[0].charge_amount, 2500.75);
+
+// Italian grouping + decimal remains correct.
+const italianMixedLocale = prepareMixedLocale(["A1", "2026", "1.234,50", "1.244,50", "10,00", "2.500,75"]);
+assert.equal(italianMixedLocale.errors.length, 0);
+assert.equal(italianMixedLocale.rows[0].previous_reading, 1234.5);
+assert.equal(italianMixedLocale.rows[0].current_reading, 1244.5);
+assert.equal(italianMixedLocale.rows[0].consumption, 10);
+assert.equal(italianMixedLocale.rows[0].charge_amount, 2500.75);
+
+// Multi-group values are parsed in both locales; single-separator legacy semantics stay unchanged.
+const usMultiGroup = prepareMixedLocale(["A1", "2026", "1,234,567.89", "1,234,577.89", "10.00", "2,500,750.25"]);
+assert.equal(usMultiGroup.errors.length, 0);
+assert.equal(usMultiGroup.rows[0].previous_reading, 1234567.89);
+assert.equal(usMultiGroup.rows[0].charge_amount, 2500750.25);
+const italianMultiGroup = prepareMixedLocale(["A1", "2026", "1.234.567,89", "1.234.577,89", "10,00", "2.500.750,25"]);
+assert.equal(italianMultiGroup.errors.length, 0);
+assert.equal(italianMultiGroup.rows[0].previous_reading, 1234567.89);
+assert.equal(italianMultiGroup.rows[0].charge_amount, 2500750.25);
+const singleSeparator = prepareSingle(["A1", "2026", "1.234", "1.244", "0.010", "", "", ""]);
+assert.equal(singleSeparator.errors.length, 0);
+assert.equal(singleSeparator.rows[0].previous_reading, 1.234);
+assert.equal(singleSeparator.rows[0].current_reading, 1.244);
+
 const commaCsv = [
   "Unita,Esercizio,Lettura precedente,Lettura attuale,Consumo,Note",
   "A1,2026,100,\"110,5\",\"10,5\",\"lettura, principale\"",

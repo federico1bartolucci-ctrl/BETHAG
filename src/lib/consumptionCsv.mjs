@@ -1,3 +1,5 @@
+import { parseBethagAmount } from "./parseBethagAmount.mjs";
+
 const DELIMITERS = [";", ",", "\t"];
 
 function firstRecordDelimiter(source) {
@@ -86,6 +88,14 @@ function validISODate(value) {
 function parseLocaleNumber(value) {
   const source = String(value ?? "").trim();
   if (!source) return null;
+
+  // When both separators are present, use the shared locale parser to
+  // distinguish Italian grouping (1.234,56) from US grouping (1,234.56).
+  // Preserve the established single-separator behavior for ambiguous values.
+  if (source.includes(",") && source.includes(".")) {
+    return parseBethagAmount(source);
+  }
+
   const normalized = source.includes(",") ? source.replace(/\./g, "").replace(",", ".") : source;
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : Number.NaN;
