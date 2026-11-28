@@ -86,8 +86,8 @@ export async function loadWorkspacePaginatedRows(
 
     const { data, error } = await query.range(0, pageSize - 1);
     if (error) throw error;
-    const page = data ?? [];
-    if (!Array.isArray(page)) throw new Error("Pagina workspace non valida.");
+    if (!Array.isArray(data)) throw new Error("Pagina workspace non valida.");
+    const page = data;
 
     for (const row of page) {
       const id = validateCursor(row);
