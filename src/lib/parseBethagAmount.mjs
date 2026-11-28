@@ -60,6 +60,9 @@ export function parseBethagAmount(value, fallback = Number.NaN) {
       const groups = raw.split(separator);
       const groupedRepeated = groups.length > 2 && groups[0].length >= 1 && groups[0].length <= 3 && groups.slice(1).every((group) => group.length === 3 && /^\d+$/.test(group));
       const groupedDotThousands = separator === "." && groups.length === 2 && groups[0].length >= 1 && groups[0].length <= 3 && groups[1].length === 3 && /^\d+$/.test(groups[1]);
+      // Once a separator appears more than once, it can only represent
+      // thousands grouping. Never reinterpret malformed groups as decimals.
+      if (groups.length > 2 && !groupedRepeated) return fallback;
       if (groupedRepeated || groupedDotThousands) {
         normalized = groups.join("");
       } else {
