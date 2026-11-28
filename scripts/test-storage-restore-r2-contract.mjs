@@ -1,11 +1,94 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { assertRestoreTargetEmpty } from "./storage-restore-target-empty.mjs";
+import { createHash } from "node:crypto";
+import { parseAndVerifyStorageRestoreManifest } from "./storage-restore-manifest.mjs";
+
+const manifest = {
+  format: "bethag-storage-backup/v1",
+  snapshot_id: "20261128-025400000Z",
+  created_at: "2026-11-28T02:54:00.000Z",
+  source_bucket: "bethag-documents",
+  object_count: 1,
+  objects: [{ key: "documents/example.pdf", blob_key: "backups/objects/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/20261128-025400000Z", size: 1, sha256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" }]
+};
+const manifestBytes = Buffer.from(JSON.stringify(manifest));
+const manifestSha256 = createHash("sha256").update(manifestBytes).digest("hex");
+const validMetadata = { format: "bethag-storage-backup-v1", sha256: manifestSha256 };
+
+function previousOptionalDigestParser(bytes, metadata) {
+  if (metadata?.sha256) {
+    const actual = createHash("sha256").update(bytes).digest("hex");
+    if (actual !== metadata.sha256) throw new Error("Manifest SHA-256 metadata mismatch");
+  }
+  const parsed = JSON.parse(bytes.toString("utf8"));
+  if (parsed.format !== "bethag-storage-backup/v1" ||
+      !Array.isArray(parsed.objects) ||
+      parsed.object_count !== parsed.objects.length ||
+      typeof parsed.snapshot_id !== "string" ||
+      !parsed.snapshot_id) {
+    throw new Error("Unsupported or structurally invalid BETHAG Storage manifest");
+  }
+  return parsed;
+}
+
+// Reproduce the old fail-open path: valid JSON was accepted when object metadata
+// (and therefore the manifest digest) was absent.
+assert.deepEqual(previousOptionalDigestParser(manifestBytes, undefined), manifest);
+assert.throws(
+  () => parseAndVerifyStorageRestoreManifest(manifestBytes, undefined),
+  /missing a valid SHA-256 metadata digest/,
+  "a manifest without its backup-writer digest must not be restorable",
+);
+assert.throws(
+  () => parseAndVerifyStorageRestoreManifest(manifestBytes, {}),
+  /missing a valid SHA-256 metadata digest/,
+);
+assert.throws(
+  () => parseAndVerifyStorageRestoreManifest(manifestBytes, { sha256: "not-a-digest" }),
+  /missing a valid SHA-256 metadata digest/,
+);
+assert.throws(
+  () => parseAndVerifyStorageRestoreManifest(manifestBytes, { sha256: manifestSha256.toUpperCase() }),
+  /missing a valid SHA-256 metadata digest/,
+);
+assert.throws(
+  () => parseAndVerifyStorageRestoreManifest(manifestBytes, { sha256: "c".repeat(64) }),
+  /Manifest SHA-256 metadata mismatch/,
+);
+assert.deepEqual(parseAndVerifyStorageRestoreManifest(manifestBytes, validMetadata), manifest);
+assert.throws(
+  () => parseAndVerifyStorageRestoreManifest(Buffer.from("{"), {
+    sha256: createHash("sha256").update("{").digest("hex")
+  }),
+  /Manifest is not valid JSON/,
+);
+assert.throws(
+  () => parseAndVerifyStorageRestoreManifest(Buffer.from("null"), {
+    sha256: createHash("sha256").update("null").digest("hex")
+  }),
+  /structurally invalid/,
+);
+const wrongMetadataFormat = { ...validMetadata, format: "other-format" };
+assert.throws(
+  () => parseAndVerifyStorageRestoreManifest(manifestBytes, wrongMetadataFormat),
+  /metadata format mismatch/,
+);
 
 const script = await readFile("scripts/restore-supabase-storage-from-r2.mjs", "utf8");
+const manifestHelper = await readFile("scripts/storage-restore-manifest.mjs", "utf8");
 const targetPreflight = await readFile("scripts/storage-restore-target-empty.mjs", "utf8");
 const targetInventory = await readFile("scripts/storage-restore-target-inventory.mjs", "utf8");
-assert.match(script, /bethag-storage-backup\/v1/);
+const backupScript = await readFile("scripts/backup-supabase-storage-to-r2.mjs", "utf8");
+const packageJson = JSON.parse(await readFile("package.json", "utf8"));
+assert.ok(script.includes("parseAndVerifyStorageRestoreManifest(bytes, response.Metadata)"));
+assert.ok(!script.includes("if (response.Metadata?.sha256)"));
+assert.ok(script.includes('from "./storage-restore-manifest.mjs"'));
+assert.ok(backupScript.includes('sha256: createHash("sha256").update(manifestBytes).digest("hex")'));
+assert.equal(packageJson.scripts.test.split("test-storage-restore-r2-contract.mjs").length - 1, 1);
+
+assert.ok(manifestHelper.includes("bethag-storage-backup/v1"));
+assert.ok(manifestHelper.includes("Manifest is missing a valid SHA-256 metadata digest"));
 assert.match(script, /--dry-run/);
 assert.match(script, /--apply/);
 assert.match(script, /RESTORE_CONFIRM_TARGET/);
