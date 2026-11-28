@@ -76,6 +76,7 @@ await assert.rejects(
 );
 
 const script = await readFile("scripts/restore-supabase-storage-from-r2.mjs", "utf8");
+const manifestHelper = await readFile("scripts/storage-restore-manifest.mjs", "utf8");
 const targetPreflight = await readFile("scripts/storage-restore-target-empty.mjs", "utf8");
 const targetInventory = await readFile("scripts/storage-restore-target-inventory.mjs", "utf8");
 const backupScript = await readFile("scripts/backup-supabase-storage-to-r2.mjs", "utf8");
