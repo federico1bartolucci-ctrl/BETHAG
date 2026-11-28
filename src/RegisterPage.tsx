@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./lib/supabase";
 import { localISODate, localISODateAfterDays } from "./lib/local-date";
 import { deleteCondominiumWork } from "./lib/bethagBackend";
@@ -9,6 +9,7 @@ import { canCloseWork, closeWorkWithHistory } from "./lib/workClosure.mjs";
 import { insertActivityWithUniqueLegacyId } from "./lib/activityLegacyId.mjs";
 import { compensateSalPaymentAfterEventFailure } from "./lib/salPaymentCompensation.mjs";
 import { updateRegisterItemWithinScope } from "./lib/registerItemUpdateScope.mjs";
+import { isCurrentRegisterLoad } from "./lib/registerLoadGeneration.mjs";
 
 type Condominium={id:number;name:string};
 type RegisterItem={id:string;condominium_id:string;item_type:string;category:string;title:string;location:string;responsible:string;expiry_date:string|null;status:string;notes:string;supplier_id:string|null;estimated_amount:number};
@@ -17,15 +18,88 @@ type Work={id:string;condominium_id:string;title:string;category:string;descript
 
 export default function RegisterPage({workspaceId,condominiums,isAdministrator=false}:{workspaceId:string;condominiums:Condominium[];isAdministrator?:boolean}){
  const [selected,setSelected]=useState<number|"all">(condominiums[0]?.id??"all");
+ const loadRequestRef=useRef(0);
+ const [loadedContextKey,setLoadedContextKey]=useState<string|null>(null);
+ const currentContextKey=JSON.stringify([workspaceId,selected]);
+ const contextIsLoaded=loadedContextKey===currentContextKey;
  const [dbId,setDbId]=useState<string|null>(null); const [items,setItems]=useState<RegisterItem[]>([]); const [suppliers,setSuppliers]=useState<Supplier[]>([]); const [works,setWorks]=useState<Work[]>([]); const [progress,setProgress]=useState<WorkProgress[]>([]); const [funds,setFunds]=useState<Fund[]>([]); const [documents,setDocuments]=useState<DocumentItem[]>([]); const [showDocuments,setShowDocuments]=useState(false); const [documentWork,setDocumentWork]=useState<Work|null>(null); const [linkedDocumentIds,setLinkedDocumentIds]=useState<number[]>([]); const [showExpense,setShowExpense]=useState(false); const [showProgress,setShowProgress]=useState(false); const [showPayment,setShowPayment]=useState(false); const [showHistory,setShowHistory]=useState(false); const [historyWork,setHistoryWork]=useState<Work|null>(null); const [historyEvents,setHistoryEvents]=useState<any[]>([]); const [paymentProgress,setPaymentProgress]=useState<WorkProgress|null>(null); const [paymentWork,setPaymentWork]=useState<Work|null>(null); const [paymentForm,setPaymentForm]=useState({entry_date:"",amount:0,notes:""}); const [progressWork,setProgressWork]=useState<Work|null>(null); const [progressForm,setProgressForm]=useState({progress_no:1,progress_date:"",title:"",status:"Presentato",percentage:0,amount:0,paid_amount:0,notes:""}); const [expenseWork,setExpenseWork]=useState<Work|null>(null); const [expenseForm,setExpenseForm]=useState({entry_date:"",due_date:"",category:"Manutenzione",description:"",amount:0,payment_status:"Da pagare",notes:""});
  const [tab,setTab]=useState<"registro"|"fornitori"|"lavori">("registro"); const [loading,setLoading]=useState(true); const [saving,setSaving]=useState(false); const [error,setError]=useState("");
  const [form,setForm]=useState({item_type:"Sicurezza",category:"Impianti",title:"",location:"",responsible:"",expiry_date:"",status:"Attivo",notes:"",supplier_id:"",estimated_amount:0});
  const [supplierForm,setSupplierForm]=useState({business_name:"",contact_name:"",fiscal_code:"",vat_number:"",email:"",phone:"",category:"",contract_start:"",contract_end:"",notes:""});
  const [editing,setEditing]=useState<string|null>(null); const [editingItemScope,setEditingItemScope]=useState<{id:string;workspaceId:string;condominiumId:string;selectedCondominium:number|"all"}|null>(null); const [editingSupplier,setEditingSupplier]=useState<string|null>(null); const [showWorkForm,setShowWorkForm]=useState(false); const [editingWork,setEditingWork]=useState<string|null>(null); const [workForm,setWorkForm]=useState({title:"",category:"Manutenzione",description:"",status:"Da programmare",priority:"Media",supplier_id:"",register_item_id:"",fund_id:"",start_date:"",expected_end_date:"",actual_end_date:"",estimated_amount:0,approved_amount:0,actual_amount:0,progress_percent:0,notes:""}); const [showItemForm,setShowItemForm]=useState(false); const [showSupplierForm,setShowSupplierForm]=useState(false);
 
- async function resolve(){if(!supabase||selected==="all"){setDbId(null);return;}const {data,error}=await supabase.from("condominiums").select("id").eq("workspace_id",workspaceId).eq("legacy_id",selected).maybeSingle();if(error)throw error;setDbId(data?.id??null);}
- async function load(){if(!supabase){setLoading(false);return;}setLoading(true);setError("");try{await resolve();let q= supabase.from("condominium_register_items").select("*").eq("workspace_id",workspaceId).order("expiry_date");let s=supabase.from("condominium_suppliers").select("*").eq("workspace_id",workspaceId).order("business_name");let w=supabase.from("condominium_works").select("*").eq("workspace_id",workspaceId).order("start_date");let docs=supabase.from("documents").select("*").eq("workspace_id",workspaceId);let fundsQ=supabase.from("condominium_funds").select("*").eq("workspace_id",workspaceId).order("name");let progQ=supabase.from("condominium_work_progress").select("*").eq("workspace_id",workspaceId).order("progress_date");const [a,b,d,e,fnd,pq]=await Promise.all([q,s,w,docs,fundsQ,progQ]);if(a.error)throw a.error;if(b.error)throw b.error;if(d.error)throw d.error;if(e.error)throw e.error;if(fnd.error)throw fnd.error;if(pq.error)throw pq.error;setItems(a.data??[]);setSuppliers(b.data??[]);setWorks(d.data??[]);setDocuments(mapRegisterDocumentRows(e.data??[]));setFunds(fnd.data??[]);setProgress(pq.data??[]);}catch(e:any){setError(e?.message||"Impossibile caricare il registro.");}finally{setLoading(false);}}
- useEffect(()=>{load();},[workspaceId,selected]);
+ async function resolve(requestId:number){
+  if(!supabase||selected==="all"){
+    if(isCurrentRegisterLoad(requestId,loadRequestRef.current))setDbId(null);
+    return;
+  }
+  const {data,error}=await supabase.from("condominiums").select("id").eq("workspace_id",workspaceId).eq("legacy_id",selected).maybeSingle();
+  if(error)throw error;
+  if(isCurrentRegisterLoad(requestId,loadRequestRef.current))setDbId(data?.id??null);
+ }
+ async function load(){
+  const requestId=++loadRequestRef.current;
+  const contextKey=JSON.stringify([workspaceId,selected]);
+  if(!supabase){
+    if(isCurrentRegisterLoad(requestId,loadRequestRef.current))setLoading(false);
+    return;
+  }
+  setLoading(true);
+  setError("");
+  try{
+    await resolve(requestId);
+    if(!isCurrentRegisterLoad(requestId,loadRequestRef.current))return;
+    const q=supabase.from("condominium_register_items").select("*").eq("workspace_id",workspaceId).order("expiry_date");
+    const supplierQuery=supabase.from("condominium_suppliers").select("*").eq("workspace_id",workspaceId).order("business_name");
+    const workQuery=supabase.from("condominium_works").select("*").eq("workspace_id",workspaceId).order("start_date");
+    const docs=supabase.from("documents").select("*").eq("workspace_id",workspaceId);
+    const fundsQuery=supabase.from("condominium_funds").select("*").eq("workspace_id",workspaceId).order("name");
+    const progressQuery=supabase.from("condominium_work_progress").select("*").eq("workspace_id",workspaceId).order("progress_date");
+    const [a,b,d,e,fnd,pq]=await Promise.all([q,supplierQuery,workQuery,docs,fundsQuery,progressQuery]);
+    if(!isCurrentRegisterLoad(requestId,loadRequestRef.current))return;
+    if(a.error)throw a.error;
+    if(b.error)throw b.error;
+    if(d.error)throw d.error;
+    if(e.error)throw e.error;
+    if(fnd.error)throw fnd.error;
+    if(pq.error)throw pq.error;
+    setItems(a.data??[]);
+    setSuppliers(b.data??[]);
+    setWorks(d.data??[]);
+    setDocuments(mapRegisterDocumentRows(e.data??[]));
+    setFunds(fnd.data??[]);
+    setProgress(pq.data??[]);
+    setLoadedContextKey(contextKey);
+  }catch(e:any){
+    if(isCurrentRegisterLoad(requestId,loadRequestRef.current))setError(e?.message||"Impossibile caricare il registro.");
+  }finally{
+    if(isCurrentRegisterLoad(requestId,loadRequestRef.current))setLoading(false);
+  }
+ }
+ useEffect(()=>{
+  setShowDocuments(false);
+  setDocumentWork(null);
+  setLinkedDocumentIds([]);
+  setShowExpense(false);
+  setExpenseWork(null);
+  setShowProgress(false);
+  setProgressWork(null);
+  setShowPayment(false);
+  setPaymentProgress(null);
+  setPaymentWork(null);
+  setShowHistory(false);
+  setHistoryWork(null);
+  setHistoryEvents([]);
+  setShowItemForm(false);
+  setShowSupplierForm(false);
+  setShowWorkForm(false);
+  setEditing(null);
+  setEditingItemScope(null);
+  setEditingSupplier(null);
+  setEditingWork(null);
+  void load();
+  return ()=>{loadRequestRef.current+=1;};
+ },[workspaceId,selected]);
 
  const scopedItems=useMemo(()=>dbId?items.filter(x=>x.condominium_id===dbId):[],[items,dbId]); const scopedSuppliers=useMemo(()=>dbId?suppliers.filter(x=>x.condominium_id===dbId):[],[suppliers,dbId]); const scopedWorks=useMemo(()=>dbId?works.filter(x=>x.condominium_id===dbId):[],[works,dbId]);
  const today=localISODate();
@@ -180,6 +254,12 @@ async function saveWork(e:React.FormEvent){e.preventDefault();if(!supabase||!dbI
     setSaving(false);
   }
 }
+ if(supabase&&!contextIsLoaded){
+  return <section className="page-section"><article className="card">
+   <p>{loading?"Caricamento del Registro condominiale...":error||"Caricamento del Registro condominiale..."}</p>
+   {!loading&&!!error&&<button className="secondary-button" type="button" onClick={()=>void load()}>Riprova</button>}
+  </article></section>;
+ }
  return <section className="page-section">
   <div className="page-header"><div><span className="eyebrow">Anagrafe tecnica e operativa</span><h1>Registro condominiale</h1><p>Sicurezza, impianti, scadenze tecniche, documenti operativi e fornitori collegati al condominio.</p></div></div>
   <div className="filter-bar"><label>Condominio<select value={String(selected)} onChange={e=>setSelected(e.target.value==="all"?"all":Number(e.target.value))}><option value="all">Seleziona condominio</option>{condominiums.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label></div>
