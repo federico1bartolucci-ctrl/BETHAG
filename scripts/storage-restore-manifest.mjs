@@ -12,7 +12,8 @@ export function assertStorageRestoreManifestObjectKeys(objects) {
   for (const item of objects) {
     if (!item || typeof item !== "object" || Array.isArray(item) ||
         typeof item.key !== "string" || item.key.length === 0 ||
-        item.key.startsWith("/") || item.key.endsWith("/") || item.key.includes("\\\\")) {
+        item.key.startsWith("/") || item.key.endsWith("/") ||
+        item.key.includes(String.fromCharCode(92))) {
       throw new Error("Manifest contains an invalid or unsafe object key");
     }
     if (seenKeys.has(item.key)) {
